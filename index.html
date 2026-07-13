@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LiteBI — Dashboards a partir de planilhas</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+/*
+ * _base.css — Global design tokens, element defaults, page shell, and tiny utilities.
+ * ALWAYS included in every page.
+ *
+ * Provides:
+ *   :root variables (light + dark), box-sizing, html/body,
+ *   element defaults (button, input, select, textarea, label, fieldset, legend,
+ *   a, hr, img, h1-h4, p, ul/ol/li, blockquote, table/th/td, details/summary,
+ *   pre/code), main / .notion-shell, utility classes, .notion-footer,
+ *   reduced-motion and responsive breakpoints for base elements.
+ */
+
+:root {
+	color-scheme: light dark;
+	--notion-bg: #ffffff;
+	--notion-bg-soft: #f9f9f8;
+	--notion-surface: #ffffff;
+	--notion-surface-hover: #f6f5f4;
+	--notion-text: #191918;
+	--notion-text-soft: rgba(0, 0, 0, 0.54);
+	--notion-text-faint: rgba(0, 0, 0, 0.3);
+	--notion-border: rgba(0, 0, 0, 0.1);
+	--notion-border-soft: rgba(0, 0, 0, 0.05);
+	--notion-shadow:
+		0px 0.7px 1.462px rgba(0, 0, 0, 0.015), 0px 3px 9px rgba(0, 0, 0, 0.03);
+	--notion-blue: #2783de;
+	--notion-orange: #d5803b;
+	--notion-red: #e56458;
+	--notion-blue-bg: #f3f9fd;
+	--notion-yellow-bg: #fcfaef;
+	--notion-orange-bg: #fcf7f4;
+	--notion-green-bg: #f6f9f7;
+	--notion-red-bg: #fdf6f6;
+	--notion-gray-bg: #f9f8f7;
+	--notion-radius: 8px;
+	--notion-page-width: 900px;
+	--notion-chart-1: #5e9fe8;
+	--notion-chart-2: #eac26b;
+	--notion-chart-3: #72bc8f;
+	--notion-chart-4: #bf8eda;
+	--notion-chart-5: #de9255;
+	--notion-chart-6: #df84a8;
+	--notion-chart-7: #4fb9c9;
+	--notion-chart-8: #e97366;
+	--diff-add: #47c1b6;
+	--diff-del: #f07070;
+	--pr-approved: #2b8a3e;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--notion-bg: #000000;
+		--notion-bg-soft: #191918;
+		--notion-surface: #191918;
+		--notion-surface-hover: #31302e;
+		--notion-text: #ffffff;
+		--notion-text-soft: rgba(255, 255, 255, 0.5);
+		--notion-text-faint: rgba(255, 255, 255, 0.3);
+		--notion-border: rgba(255, 255, 255, 0.2);
+		--notion-border-soft: rgba(255, 255, 255, 0.1);
+		--notion-shadow:
+			0px 0.7px 1.462px rgba(0, 0, 0, 0.06), 0px 3px 9px rgba(0, 0, 0, 0.12);
+		--notion-blue: #5e9fe8;
+		--notion-orange: #de9255;
+		--notion-red: #e97366;
+		--notion-blue-bg: rgba(41, 139, 253, 0.061);
+		--notion-yellow-bg: rgba(203, 145, 47, 0.08);
+		--notion-orange-bg: rgba(246, 126, 35, 0.08);
+		--notion-green-bg: rgba(42, 157, 118, 0.08);
+		--notion-red-bg: rgba(246, 73, 50, 0.08);
+		--notion-gray-bg: #31302e;
+		--diff-add: #5dd8cb;
+		--diff-del: #ff8a80;
+		--pr-approved: #69db7c;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+html {
+	scroll-behavior: smooth;
+}
+body {
+	margin: 0;
+	background: var(--notion-bg);
+	color: var(--notion-text);
+	font-family:
+		ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica,
+		"Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+	font-size: 16px;
+	line-height: 1.5;
+	transition:
+		background 180ms ease,
+		color 180ms ease;
+}
+
+/* -- Base element defaults -------------------------------- */
+button,
+[type="button"],
+[type="submit"],
+[type="reset"] {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 8px 16px;
+	font: inherit;
+	font-size: 14px;
+	font-weight: 500;
+	line-height: 1.2;
+	color: #ffffff;
+	background: var(--notion-blue);
+	border: 1px solid transparent;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: background 150ms;
+	white-space: nowrap;
+}
+button:hover,
+[type="button"]:hover,
+[type="submit"]:hover,
+[type="reset"]:hover {
+	background: color-mix(in srgb, var(--notion-blue) 82%, black);
+}
+button:focus-visible,
+[type="button"]:focus-visible,
+[type="submit"]:focus-visible,
+[type="reset"]:focus-visible {
+	outline: 2px solid var(--notion-blue);
+	outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+	font: inherit;
+	font-size: 14px;
+	line-height: 1.4;
+	color: var(--notion-text);
+	background: var(--notion-surface);
+	border: 1px solid var(--notion-border);
+	border-radius: 8px;
+	padding: 8px 12px;
+	transition: border-color 150ms;
+}
+input:focus,
+select:focus,
+textarea:focus {
+	outline: none;
+	border-color: var(--notion-blue);
+	box-shadow: 0 0 0 2px rgba(9, 127, 232, 0.15);
+}
+input::placeholder,
+textarea::placeholder {
+	color: var(--notion-text-faint);
+}
+select {
+	appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' fill='none' stroke='%23999' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 10px center;
+	padding-right: 30px;
+}
+textarea {
+	resize: vertical;
+	min-height: 80px;
+}
+input[type="range"] {
+	border: none;
+	padding: 0;
+	background: transparent;
+	accent-color: var(--notion-blue);
+	height: 18px;
+	cursor: pointer;
+	box-shadow: none;
+}
+input[type="range"]:focus {
+	box-shadow: none;
+}
+input[type="checkbox"],
+input[type="radio"] {
+	width: 16px;
+	height: 16px;
+	accent-color: var(--notion-blue);
+	border: 1px solid var(--notion-border);
+	padding: 0;
+	cursor: pointer;
+}
+label {
+	display: block;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--notion-text);
+	margin-bottom: 6px;
+}
+fieldset {
+	border: 1px solid var(--notion-border-soft);
+	border-radius: 10px;
+	padding: 16px;
+	margin: 0;
+}
+legend {
+	font-weight: 600;
+	padding: 0 4px;
+}
+
+a {
+	color: var(--notion-text);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+	text-decoration-color: var(--notion-border);
+}
+a:hover {
+	text-decoration-color: var(--notion-text);
+}
+
+hr {
+	height: 1px;
+	margin: 34px 0;
+	border: none;
+	background: var(--notion-border-soft);
+}
+
+img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 8px;
+}
+
+h1,
+h2,
+h3,
+h4 {
+	text-wrap: balance;
+}
+h1 {
+	margin: 0 0 14px;
+	font-size: clamp(42px, 7vw, 72px);
+	line-height: 1.1;
+	letter-spacing: -0.035em;
+	font-weight: 700;
+}
+h2 {
+	margin: 44px 0 10px;
+	font-size: 32px;
+	line-height: 1.25;
+	letter-spacing: -0.025em;
+}
+h3 {
+	margin: 0 0 6px;
+	font-size: 18px;
+	line-height: 1.556;
+	letter-spacing: -0.007em;
+}
+p {
+	margin: 0 0 10px;
+}
+
+ul,
+ol {
+	margin: 8px 0 16px;
+	padding-left: 24px;
+}
+li {
+	margin-bottom: 4px;
+}
+li::marker {
+	color: var(--notion-text-faint);
+}
+
+blockquote {
+	border-left: 3px solid var(--notion-text);
+	padding: 4px 0 4px 16px;
+	margin: 24px 0;
+}
+blockquote p {
+	font-size: 18px;
+	line-height: 1.5;
+	margin: 0;
+}
+
+table {
+	width: 100%;
+	margin: 14px 0;
+	border-collapse: separate;
+	border-spacing: 0;
+	border: 1px solid var(--notion-border-soft);
+	border-radius: 10px;
+	overflow: hidden;
+	background: var(--notion-surface);
+	font-size: 14px;
+}
+th,
+td {
+	padding: 12px 14px;
+	vertical-align: top;
+	text-align: left;
+	border-right: 1px solid var(--notion-border-soft);
+	border-bottom: 1px solid var(--notion-border-soft);
+}
+th:last-child,
+td:last-child {
+	border-right: 0;
+}
+tr:last-child td {
+	border-bottom: 0;
+}
+th {
+	background: var(--notion-bg-soft);
+	color: var(--notion-text-soft);
+	font-weight: 600;
+}
+
+details {
+	margin: 16px 0;
+	border-radius: var(--notion-radius);
+}
+summary {
+	padding: 8px 10px;
+	border-radius: var(--notion-radius);
+	cursor: pointer;
+	font-weight: 600;
+}
+summary:hover {
+	background: var(--notion-surface-hover);
+}
+details p {
+	margin: 8px 10px 0 28px;
+	color: var(--notion-text-soft);
+}
+
+pre,
+code {
+	font-family: ui-monospace, "iA Writer Mono", Nitti, Menlo, Courier, monospace;
+}
+pre {
+	margin: 16px 0;
+	padding: 14px 16px;
+	overflow-x: auto;
+	border: 1px solid var(--notion-border-soft);
+	border-radius: 10px;
+	background: var(--notion-gray-bg);
+	font-size: 13px;
+	line-height: 1.55;
+}
+code {
+	font-size: 0.9em;
+	padding: 2px 5px;
+	border-radius: 4px;
+	background: var(--notion-gray-bg);
+}
+pre code {
+	font-size: inherit;
+	padding: 0;
+	border-radius: 0;
+	background: none;
+}
+
+main {
+	max-width: var(--notion-page-width);
+	margin: 0 auto;
+	padding: 76px 24px 88px;
+}
+
+section {
+	margin-top: 44px;
+}
+section:first-child {
+	margin-top: 0;
+}
+
+/* -- Page shell ------------------------------------------- */
+.notion-shell {
+	max-width: var(--notion-page-width);
+	margin: 0 auto;
+	padding: 76px 24px 88px;
+}
+
+/* -- Tiny utilities --------------------------------------- */
+.notion-lede {
+	max-width: 720px;
+	margin: 0 0 24px;
+	color: var(--notion-text-soft);
+	font-size: 20px;
+}
+.notion-muted {
+	color: var(--notion-text-soft);
+}
+.notion-faint {
+	color: var(--notion-text-faint);
+}
+.notion-divider {
+	height: 1px;
+	margin: 34px 0;
+	background: var(--notion-border-soft);
+}
+.notion-eyebrow {
+	display: inline-block;
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.0078125rem;
+	text-transform: uppercase;
+	color: var(--notion-blue);
+}
+
+/* -- Footer ----------------------------------------------- */
+.notion-footer {
+	margin-top: 52px;
+	padding-top: 18px;
+	border-top: 1px solid var(--notion-border-soft);
+	color: var(--notion-text-faint);
+	font-size: 13px;
+}
+
+/* -- Accessibility & motion ------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
+
+/* -- Responsive: 560px (base elements) -------------------- */
+@media (max-width: 560px) {
+	main,
+	.notion-shell {
+		padding-inline: 16px;
+	}
+	table {
+		display: block;
+		overflow-x: auto;
+	}
+}
+
+/* ===== LiteBI — estilos da aplicação ===== */
+body { background: var(--notion-bg-soft); }
+.hidden { display: none !important; }
+
+/* Topbar */
+.topbar { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 14px;
+  padding: 12px 22px; background: var(--notion-surface); border-bottom: 1px solid var(--notion-border); box-shadow: var(--notion-shadow); }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -.02em; }
+.brand .logo { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, #5e9fe8, #4fb9c9); font-size: 16px; }
+.brand small { font-weight: 500; color: var(--notion-text-soft); font-size: 12px; }
+.topbar .spacer { flex: 1; }
+.file-pill { font-size: 13px; color: var(--notion-text-soft); background: var(--notion-gray-bg); padding: 5px 12px; border-radius: 20px; }
+.save-status { font-size: 12px; color: var(--notion-chart-3); opacity: 0; transition: opacity .25s; }
+.save-status.show { opacity: 1; }
+
+/* Layout central */
+.container { max-width: 1280px; margin: 0 auto; padding: 28px 22px 80px; }
+.center-narrow { max-width: 720px; margin: 0 auto; }
+
+/* Upload */
+.upload-hero { text-align: center; padding: 30px 0 10px; }
+.upload-hero h1 { font-size: clamp(32px, 5vw, 48px); }
+.upload-hero p { font-size: 18px; color: var(--notion-text-soft); max-width: 560px; margin: 0 auto; }
+.dropzone { margin: 28px auto 0; max-width: 640px; border: 2px dashed var(--notion-border); border-radius: 16px;
+  padding: 54px 24px; text-align: center; cursor: pointer; background: var(--notion-surface); transition: all .2s; }
+.dropzone:hover, .dropzone.drag { border-color: var(--notion-blue); background: var(--notion-blue-bg); }
+.dropzone .dz-ic { font-size: 42px; }
+.dropzone h3 { margin-top: 10px; }
+.dropzone .formats { margin-top: 6px; font-size: 13px; color: var(--notion-text-faint); }
+.err { color: var(--notion-red); font-size: 14px; margin-top: 14px; text-align: center; min-height: 18px; }
+.feature-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 40px; }
+.feature { background: var(--notion-surface); border: 1px solid var(--notion-border-soft); border-radius: 12px; padding: 18px; }
+.feature .fi { font-size: 22px; } .feature h4 { margin: 8px 0 4px; font-size: 15px; } .feature p { font-size: 13px; color: var(--notion-text-soft); margin: 0; }
+
+/* Prévia */
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.section-head h2 { margin: 0; font-size: 22px; }
+.meta-line { font-size: 13px; color: var(--notion-text-soft); margin-bottom: 16px; }
+.tbl-wrap { overflow: auto; max-height: 100%; border-radius: 10px; }
+.tbl-wrap table { margin: 0; font-size: 13px; }
+.tbl-wrap th { position: sticky; top: 0; z-index: 1; white-space: nowrap; }
+.tbl-wrap td { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.type-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 20px; font-size: 10px; font-weight: 600;
+  vertical-align: middle; text-transform: none; }
+.type-badge[data-t=numero], .type-badge[data-t=moeda], .type-badge[data-t=percentual] { background: var(--notion-blue-bg); color: var(--notion-blue); }
+.type-badge[data-t=data] { background: var(--notion-orange-bg); color: var(--notion-orange); }
+.type-badge[data-t=categoria] { background: var(--notion-green-bg); color: var(--notion-chart-3); }
+.type-badge[data-t=texto] { background: var(--notion-gray-bg); color: var(--notion-text-soft); }
+.btn-row { display: flex; gap: 10px; margin-top: 18px; }
+button.secondary { background: var(--notion-surface); color: var(--notion-text); border: 1px solid var(--notion-border); }
+button.secondary:hover { background: var(--notion-surface-hover); }
+button.ghost { background: transparent; color: var(--notion-text-soft); border: 1px solid var(--notion-border); }
+button.ghost:hover { background: var(--notion-surface-hover); }
+
+/* Toolbar do dashboard */
+.dash-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.dash-toolbar .group { display: flex; gap: 8px; }
+.dash-toolbar .spacer { flex: 1; }
+.role-box { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--notion-text-soft); }
+.role-box select { padding: 6px 28px 6px 10px; font-size: 13px; }
+button.small { padding: 7px 12px; font-size: 13px; }
+.dashboardActions.viewer .editor-only { display: none; }
+
+/* Filtros */
+.filter-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; min-height: 4px; }
+.chip { background: var(--notion-blue-bg); color: var(--notion-blue); border-radius: 20px; padding: 4px 10px; font-size: 12px; font-weight: 500; }
+.chip b { cursor: pointer; margin-left: 4px; opacity: .7; } .chip b:hover { opacity: 1; }
+
+/* Grid */
+.grid-stack { background:
+  linear-gradient(90deg, var(--notion-border-soft) 1px, transparent 1px) 0 0 / calc(100%/6) 100%,
+  transparent; border-radius: 12px; min-height: 360px; }
+.grid-stack-item-content { overflow: visible !important; }
+.comp-card { height: 100%; display: flex; flex-direction: column; background: var(--notion-surface);
+  border: 1px solid var(--notion-border-soft); border-radius: 12px; box-shadow: var(--notion-shadow); overflow: hidden; }
+.comp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px;
+  border-bottom: 1px solid var(--notion-border-soft); cursor: move; background: var(--notion-surface); }
+.comp-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.comp-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.icon-btn { background: transparent; color: var(--notion-text-faint); border: none; padding: 2px 6px; font-size: 13px; border-radius: 6px; }
+.icon-btn:hover { background: var(--notion-surface-hover); color: var(--notion-text); }
+.comp-body { flex: 1; padding: 12px; overflow: auto; display: flex; flex-direction: column; min-height: 0; position: relative; }
+.comp-card .comp-body canvas { flex: 1; min-height: 0; }
+.kpi-value { font-size: clamp(24px, 4vw, 38px); font-weight: 700; letter-spacing: -.02em; line-height: 1.05; margin: auto 0 4px; }
+.kpi-sub { font-size: 12px; color: var(--notion-text-soft); }
+.empty-hint { text-align: center; color: var(--notion-text-faint); padding: 50px 20px; font-size: 15px; }
+
+/* Modais */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; z-index: 60; padding: 20px; }
+.modal-backdrop.open { display: flex; }
+.modal { background: var(--notion-surface); border-radius: 16px; width: 100%; max-width: 460px; max-height: 88vh; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--notion-border-soft); }
+.modal-head h3 { margin: 0; font-size: 17px; }
+.modal-body { padding: 18px 20px; }
+.modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--notion-border-soft); }
+.field { margin-bottom: 14px; }
+.field label { font-size: 13px; }
+.field select, .field input, .field textarea { width: 100%; }
+.field textarea { min-height: 74px; resize: vertical; line-height: 1.45; }
+.context-card { margin: 18px 0; padding: 18px; background: var(--notion-blue-bg); border: 1px solid var(--notion-border-soft); border-radius: 12px; }
+.context-card h3 { margin: 0 0 4px; font-size: 16px; }
+.context-card > p { margin: 0 0 16px; font-size: 13px; color: var(--notion-text-soft); }
+.context-columns { display: grid; gap: 10px; }
+.context-column { display: grid; grid-template-columns: minmax(130px, .7fr) 1.3fr; gap: 10px; align-items: center; }
+.context-column label { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.context-column input { background: var(--notion-surface); }
+@media (max-width: 620px) { .context-column { grid-template-columns: 1fr; gap: 4px; } }
+.hint { font-size: 12px; color: var(--notion-orange); min-height: 14px; }
+.color-row { display: flex; gap: 8px; }
+.swatch { width: 26px; height: 26px; border-radius: 7px; cursor: pointer; border: 2px solid transparent; }
+.swatch.sel { border-color: var(--notion-text); box-shadow: 0 0 0 2px var(--notion-surface) inset; }
+.chart-type-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ct-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border: 1px solid var(--notion-border); border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 500; }
+.ct-opt input { display: none; } .ct-opt.sel { border-color: var(--notion-blue); background: var(--notion-blue-bg); color: var(--notion-blue); }
+.ct-ic { font-size: 18px; }
+.check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 180px; overflow: auto; }
+.chk { font-weight: 400; display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 0; }
+.chk input { width: auto; }
+
+.color-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.color-cols input[type=color] { width: 100%; height: 42px; padding: 3px; cursor: pointer; }
+.exp-preview { margin-top: 14px; height: 90px; border-radius: 12px; display: flex; align-items: center; padding: 0 18px;
+  color: #fff; font-weight: 700; font-size: 20px; letter-spacing: -.02em; background: linear-gradient(135deg, #5e9fe8, #72bc8f); }
+#btnExport { background: linear-gradient(135deg, var(--notion-blue), var(--notion-chart-3)); }
+@media (max-width: 720px) { .feature-row { grid-template-columns: 1fr; } }
+
+/* ===== Editor de painel (grid customizado estilo patches) ===== */
+.board-tray { background: var(--notion-surface,#fff); border: 1px solid var(--notion-border-soft,#e3e3e0); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; }
+.tray-head { font-size: 13px; font-weight: 600; margin-bottom: 8px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.tray-head small { font-weight: 400; color: var(--notion-text-soft,#6b7280); font-size: 12px; }
+.tray-items { display: flex; flex-wrap: wrap; gap: 8px; min-height: 42px; align-items: center; }
+.tray-empty { color: var(--notion-text-soft,#6b7280); font-size: 13px; padding: 6px 2px; }
+.tray-chip { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--notion-bg,#f6f7f9); border: 1px solid var(--notion-border-soft,#e3e3e0); border-radius: 10px; cursor: grab; user-select: none; touch-action: none; font-size: 13px; box-shadow: var(--notion-shadow,0 1px 3px rgba(0,0,0,.06)); }
+.tray-chip:hover { border-color: var(--notion-blue,#5e9fe8); }
+.tray-chip:active { cursor: grabbing; transform: scale(.97); }
+.tray-chip .chip-ic { font-size: 15px; line-height: 1; }
+.tray-chip .chip-tag { font-size: 11px; color: var(--notion-text-soft,#6b7280); background: var(--notion-surface,#fff); border: 1px solid var(--notion-border-soft,#e3e3e0); border-radius: 6px; padding: 1px 6px; }
+
+.grid-wrap { overflow-x: auto; padding-bottom: 6px; }
+.lb-grid { position: relative; display: grid; grid-template-columns: repeat(6, 1fr); grid-auto-rows: var(--cell-h,148px); gap: 10px; min-width: 560px; }
+.cell-slot { border: 1.5px dashed var(--notion-border-soft,#e3e3e0); border-radius: 12px; background: rgba(0,0,0,.012); transition: background .12s, border-color .12s; }
+.cell-slot.drop-hover { border-color: var(--notion-blue,#5e9fe8); border-style: solid; background: rgba(94,159,232,.14); }
+.lb-item { position: relative; z-index: 2; touch-action: none; min-width: 0; min-height: 0; }
+.lb-item .comp-card { height: 100%; cursor: grab; }
+.lb-item .comp-head { cursor: grab; }
+.lb-item.dragging { opacity: .92; }
+.lb-item.dragging .comp-card { cursor: grabbing; box-shadow: 0 12px 30px rgba(0,0,0,.18); }
+.lb-item.selected { outline: 2px solid var(--notion-blue,#5e9fe8); outline-offset: 2px; border-radius: 14px; z-index: 5; }
+.resize-handle { position: absolute; right: -5px; bottom: -5px; width: 18px; height: 18px; border-radius: 5px; background: var(--notion-blue,#5e9fe8); border: 2px solid #fff; cursor: nwse-resize; opacity: 0; transition: opacity .12s; z-index: 6; box-shadow: 0 1px 5px rgba(0,0,0,.3); touch-action: none; }
+.lb-item:hover .resize-handle, .lb-item.selected .resize-handle { opacity: 1; }
+.drag-ghost { position: fixed; pointer-events: none; z-index: 9999; background: var(--notion-surface,#fff); border: 1px solid var(--notion-blue,#5e9fe8); border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600; box-shadow: 0 10px 26px rgba(0,0,0,.22); display: flex; gap: 8px; align-items: center; max-width: 240px; }
+.drag-ghost span { font-size: 15px; }
+#screen-dashboard.viewer .editor-only { display: none !important; }
+#screen-dashboard.viewer .resize-handle { display: none; }
+@media (max-width: 720px) { .lb-grid { --cell-h: 132px; } }
+
+/* KPI de texto (nome/rótulo) */
+.kpi-value.kpi-text{font-size:clamp(18px,3.2vw,30px);line-height:1.15;word-break:break-word;}
+
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="logo">◩</span><div>LiteBI <br><small>Dados valiosos em poucos minutos</small></div></div>
+  <div class="spacer"></div>
+  <span id="saveStatus" class="save-status"></span>
+</header>
+
+<!-- ===== TELA 1: UPLOAD ===== -->
+<main id="screen-upload" class="container">
+  <section class="upload-hero center-narrow">
+    <span class="notion-eyebrow">Business Intelligence simples</span>
+    <h1>Transforme planilhas em dashboards</h1>
+    <p>Envie sua base em Excel ou CSV, crie KPIs, monte gráficos e organize tudo em um painel visual — sem código, sem SQL.</p>
+  </section>
+  <div id="dropzone" class="dropzone">
+    <div class="dz-ic">↑</div>
+    <h3>Arraste seu arquivo aqui ou clique para enviar</h3>
+    <div class="formats">Formatos suportados: .xlsx, .xls, .csv · até 10 MB</div>
+    <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" hidden>
+  </div>
+  <div id="uploadError" class="err"></div>
+  <div class="feature-row center-narrow" style="max-width:900px">
+    <div class="feature"><div class="fi">✨</div><h4>KPIs guiados</h4><p>Soma, média, máximo, contagem, diferença e percentuais — escolhendo por clique.</p></div>
+    <div class="feature"><div class="fi">◑</div><h4>Gráficos visuais</h4><p>Colunas, barras, linha e pizza com validação automática de compatibilidade.</p></div>
+    <div class="feature"><div class="fi">▦</div><h4>Grid 6 colunas</h4><p>Arraste, redimensione e reorganize. O layout é salvo automaticamente.</p></div>
+  </div>
+</main>
+
+<!-- ===== TELA 2: PRÉVIA ===== -->
+<main id="screen-preview" class="container hidden">
+  <div class="section-head"><h2>Prévia dos dados</h2></div>
+  <div id="previewMeta" class="meta-line"></div>
+  <section class="context-card" aria-labelledby="contextTitle">
+    <h3 id="contextTitle">Dê contexto para a sua base</h3>
+    <p>Essas informações ajudarão a IA a interpretar os dados e escrever um relatório mais útil. Você pode preencher agora ou depois.</p>
+    <div class="field">
+      <label for="tableDescription">O que esta tabela representa?</label>
+      <textarea id="tableDescription" placeholder="Ex.: Vendas realizadas por filial, produto e vendedor no período de janeiro a junho de 2026."></textarea>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <label>O que significa cada coluna?</label>
+      <div id="columnDescriptions" class="context-columns"></div>
+    </div>
+  </section>
+  <div id="previewTable"></div>
+  <div class="btn-row">
+    <button id="btnAutoBuild">✨ Montar dashboard com IA</button>
+    <button id="btnConfirmData" class="secondary">Montar manualmente →</button>
+    <button id="btnBackUpload" class="ghost">Trocar arquivo</button>
+  </div>
+</main>
+
+<!-- ===== TELA 3: DASHBOARD ===== -->
+<main id="screen-dashboard" class="container hidden">
+  <div class="dash-toolbar" id="dashboardActions">
+    <span class="file-pill" id="dashFileName"></span>
+    <div class="group editor-only">
+      <button id="btnAddKpi" class="small">+ KPI</button>
+      <button id="btnAddChart" class="small">+ Gráfico</button>
+      <button id="btnAddTable" class="small">+ Tabela</button>
+      <button id="btnAddFilter" class="small secondary">≡ Filtro</button>
+      <button id="btnAuto" class="small secondary">✨ Montar com IA</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="role-box">Perfil:
+      <select id="roleSelect">
+        <option value="owner">Dono</option>
+        <option value="editor">Editor</option>
+        <option value="viewer">Visualizador</option>
+      </select>
+    </div>
+    <button id="btnExport">⤓ Exportar dashboard (.html)</button>
+    <button id="btnNewBase" class="small ghost editor-only">Substituir base</button>
+  </div>
+  <div id="filterChips" class="filter-bar"></div>
+  <button id="clearFilters" class="ghost small hidden" style="margin-bottom:10px">Limpar filtros</button>
+  <div class="board-tray editor-only" id="tray">
+    <div class="tray-head">Componentes prontos <small>arraste um bloco para um quadrado do painel abaixo</small></div>
+    <div class="tray-items" id="trayItems"></div>
+  </div>
+  <div class="empty-hint hidden" id="emptyHint">Arraste um componente da bandeja acima para um dos quadrados do painel — depois é só mover e redimensionar.</div>
+  <div class="grid-wrap"><div id="grid" class="lb-grid"></div></div>
+</main>
+
+<!-- ===== MODAIS ===== -->
+<div class="modal-backdrop" id="kpiModal"><div class="modal">
+  <div class="modal-head"><h3 id="kpiModalTitle">Adicionar KPI</h3><button class="icon-btn" data-close="kpiModal">✕</button></div>
+  <div class="modal-body"><form id="kpiForm" onsubmit="return false"></form></div>
+  <div class="modal-foot"><button class="ghost" data-close="kpiModal">Cancelar</button><button id="kpiSave">Salvar KPI</button></div>
+</div></div>
+
+<div class="modal-backdrop" id="chartModal"><div class="modal">
+  <div class="modal-head"><h3 id="chartModalTitle">Adicionar gráfico</h3><button class="icon-btn" data-close="chartModal">✕</button></div>
+  <div class="modal-body"><form id="chartForm" onsubmit="return false"></form></div>
+  <div class="modal-foot"><button class="ghost" data-close="chartModal">Cancelar</button><button id="chartSave">Salvar gráfico</button></div>
+</div></div>
+
+<div class="modal-backdrop" id="tableModal"><div class="modal">
+  <div class="modal-head"><h3 id="tableModalTitle">Adicionar tabela</h3><button class="icon-btn" data-close="tableModal">✕</button></div>
+  <div class="modal-body"><form id="tableForm" onsubmit="return false"></form></div>
+  <div class="modal-foot"><button class="ghost" data-close="tableModal">Cancelar</button><button id="tableSave">Salvar tabela</button></div>
+</div></div>
+
+<div class="modal-backdrop" id="filterModal"><div class="modal">
+  <div class="modal-head"><h3>Adicionar filtro</h3><button class="icon-btn" data-close="filterModal">✕</button></div>
+  <div class="modal-body"><form id="filterForm" onsubmit="return false"></form></div>
+  <div class="modal-foot"><button class="ghost" data-close="filterModal">Cancelar</button><button id="filterSave">Aplicar filtro</button></div>
+</div></div>
+
+<div class="modal-backdrop" id="exportModal"><div class="modal">
+  <div class="modal-head"><h3>Exportar dashboard</h3><button class="icon-btn" data-close="exportModal">✕</button></div>
+  <div class="modal-body">
+    <p class="notion-muted" style="font-size:13px;margin-top:0">Gere um arquivo <strong>.html</strong> independente com seu dashboard. Defina o título e as 2 cores do tema.</p>
+    <div class="field"><label>Título do dashboard</label><input id="expTitle" placeholder="Ex.: Resultados Q2"></div>
+    <div class="color-cols">
+      <div class="field"><label>Cor 1 (principal)</label><input id="expC1" type="color" value="#5e9fe8"></div>
+      <div class="field"><label>Cor 2 (secundária)</label><input id="expC2" type="color" value="#72bc8f"></div>
+    </div>
+    <div class="exp-preview" id="expPreview"><span id="expPreviewTitle">Meu Dashboard</span></div>
+  </div>
+  <div class="modal-foot"><button class="ghost" data-close="exportModal">Cancelar</button><button id="exportConfirm">Gerar .html</button></div>
+</div></div>
+<script>
+/* ============================================================
+   LiteBI — MVP (editor de dashboard + exportação .html tematizada)
+   ============================================================ */
+(function () {
+  'use strict';
+
+  // ---------- Estado ----------
+  const STORAGE_KEY = 'litebi_state_v2';
+  const DEFAULT_THEME = { title: 'Meu Dashboard', color1: '#5e9fe8', color2: '#72bc8f' };
+  const state = {
+    meta: null, columns: [], rows: [], components: [], filters: [],
+    role: 'owner', theme: Object.assign({}, DEFAULT_THEME)
+  };
+
+  const charts = {};
+  let editingId = null;
+  const COLS = 6, BASE_ROWS = 3, MOVE_THRESH = 4;
+  let selectedId = null, drag = null, lastHover = null, dragExtra = 0;
+
+  // ---------- Helpers DOM ----------
+  const $ = (s, c) => (c || document).querySelector(s);
+  const $$ = (s, c) => Array.from((c || document).querySelectorAll(s));
+  const uid = () => 'c' + Math.random().toString(36).slice(2, 9);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ---------- Parsing ----------
+  function parseNumber(v) {
+    if (v == null || v === '') return null;
+    if (typeof v === 'number') return isFinite(v) ? v : null;
+    let s = String(v).trim().replace(/[R$\u20ac\u00a3%\s]/g, '');
+    if (/,\d{1,2}$/.test(s) && s.indexOf('.') > -1) s = s.replace(/\./g, '').replace(',', '.');
+    else if (/,/.test(s) && !/\./.test(s)) s = s.replace(',', '.');
+    else s = s.replace(/,/g, '');
+    const n = parseFloat(s); return isFinite(n) ? n : null;
+  }
+  function parseDate(v) {
+    if (v == null || v === '') return null;
+    if (v instanceof Date && !isNaN(v)) return v;
+    const s = String(v).trim();
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (m) { const d = new Date(+(+m[3] < 100 ? 2000 + +m[3] : m[3]), +m[2] - 1, +m[1]); return isNaN(d) ? null : d; }
+    const d = new Date(s); return isNaN(d) ? null : d;
+  }
+
+  // ---------- Detecção de tipo ----------
+  function detectType(values) {
+    const sample = values.filter((v) => v != null && v !== '').slice(0, 200);
+    if (!sample.length) return 'texto';
+    let num = 0, date = 0, cur = 0, pct = 0;
+    for (const v of sample) {
+      const s = String(v).trim();
+      if (/%$/.test(s)) pct++;
+      if (/[R$\u20ac\u00a3]/.test(s)) cur++;
+      if (parseNumber(v) != null && /\d/.test(s)) num++;
+      if (parseDate(v) != null && /[\/\-]|\d{4}/.test(s) && !/^\d+([.,]\d+)?$/.test(s)) date++;
+    }
+    const n = sample.length;
+    if (date / n > 0.7) return 'data';
+    if (pct / n > 0.6) return 'percentual';
+    if (cur / n > 0.6) return 'moeda';
+    if (num / n > 0.8) return 'numero';
+    const distinct = new Set(sample.map(String)).size;
+    if (distinct <= Math.max(12, n * 0.3)) return 'categoria';
+    return 'texto';
+  }
+  const isNumeric = (t) => ['numero', 'moeda', 'percentual'].includes(t);
+  const colByName = (name) => state.columns.find((c) => c.name === name);
+
+  // ---------- Paleta a partir de 2 cores ----------
+  function hexLerp(a, b, t) {
+    const pa = a.replace('#', ''), pb = b.replace('#', '');
+    const ar = parseInt(pa.slice(0, 2), 16), ag = parseInt(pa.slice(2, 4), 16), ab = parseInt(pa.slice(4, 6), 16);
+    const br = parseInt(pb.slice(0, 2), 16), bg = parseInt(pb.slice(2, 4), 16), bb = parseInt(pb.slice(4, 6), 16);
+    const r = Math.round(ar + (br - ar) * t), g = Math.round(ag + (bg - ag) * t), bl = Math.round(ab + (bb - ab) * t);
+    return '#' + [r, g, bl].map((x) => x.toString(16).padStart(2, '0')).join('');
+  }
+  function palette(n) {
+    const c1 = state.theme.color1, c2 = state.theme.color2;
+    if (n <= 1) return [c1];
+    const out = []; for (let i = 0; i < n; i++) out.push(hexLerp(c1, c2, i / (n - 1)));
+    return out;
+  }
+
+  // ---------- Persistência ----------
+  let saveTimer = null;
+  function flashSaved() {
+    const el = $('#saveStatus'); if (!el) return;
+    el.textContent = '✓ Salvo automaticamente'; el.classList.add('show');
+    clearTimeout(saveTimer); saveTimer = setTimeout(() => el.classList.remove('show'), 1500);
+  }
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      flashSaved();
+    } catch (e) { console.warn(e); }
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return false;
+      Object.assign(state, JSON.parse(raw));
+      if (!state.theme) state.theme = Object.assign({}, DEFAULT_THEME);
+      state.components.forEach((c) => { if (c.placed === undefined) c.placed = true; });
+      return !!(state.meta && state.rows.length);
+    } catch (e) { return false; }
+  }
+
+  // ---------- Filtros / agregação ----------
+  function applyFilters(rows) {
+    if (!state.filters.length) return rows;
+    return rows.filter((row) => state.filters.every((f) => {
+      const raw = row[f.column], col = colByName(f.column);
+      if (col && isNumeric(col.type)) {
+        const n = parseNumber(raw); if (n == null) return false;
+        if (f.op === 'between') return n >= parseNumber(f.value) && n <= parseNumber(f.value2);
+        if (f.op === 'gte') return n >= parseNumber(f.value);
+        if (f.op === 'lte') return n <= parseNumber(f.value);
+        if (f.op === 'eq') return n === parseNumber(f.value);
+      } else if (col && col.type === 'data') {
+        const d = parseDate(raw); if (!d) return false;
+        if (f.op === 'between') return d >= parseDate(f.value) && d <= parseDate(f.value2);
+        if (f.op === 'gte') return d >= parseDate(f.value);
+        if (f.op === 'lte') return d <= parseDate(f.value);
+      } else {
+        if (f.op === 'eq') return String(raw) === String(f.value);
+        if (f.op === 'contains') return String(raw || '').toLowerCase().includes(String(f.value).toLowerCase());
+      }
+      return true;
+    }));
+  }
+  function aggregate(rows, column, agg) {
+    const nums = rows.map((r) => parseNumber(r[column])).filter((n) => n != null);
+    switch (agg) {
+      case 'soma': return nums.reduce((a, b) => a + b, 0);
+      case 'media': return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+      case 'max': return nums.length ? Math.max.apply(null, nums) : 0;
+      case 'min': return nums.length ? Math.min.apply(null, nums) : 0;
+      case 'contagem': return rows.filter((r) => r[column] != null && r[column] !== '').length;
+      case 'distinta': return new Set(rows.map((r) => String(r[column])).filter((v) => v !== '' && v !== 'null')).size;
+      default: return 0;
+    }
+  }
+  function computeKpi(cfg) {
+    const rows = applyFilters(state.rows);
+    if (cfg.mode === 'diferenca') return aggregate(rows, cfg.column, 'soma') - aggregate(rows, cfg.column2, 'soma');
+    if (cfg.mode === 'reducao') { const a = aggregate(rows, cfg.column, 'soma'), b = aggregate(rows, cfg.column2, 'soma'); return a ? ((a - b) / a) * 100 : 0; }
+    if (cfg.mode === 'crescimento') { const a = aggregate(rows, cfg.column, 'soma'), b = aggregate(rows, cfg.column2, 'soma'); return a ? ((b - a) / a) * 100 : 0; }
+    return aggregate(rows, cfg.column, cfg.agg);
+  }
+  function computeKpiLabel(cfg) {
+    const rows = applyFilters(state.rows), groups = new Map();
+    for (const r of rows) {
+      const key = r[cfg.labelColumn];
+      if (key == null || key === '') continue;
+      const k = String(key);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(r);
+    }
+    if (!groups.size) return '—';
+    let best = null, bestVal = null;
+    for (const [k, rs] of groups) {
+      const val = cfg.rankColumn ? aggregate(rs, cfg.rankColumn, cfg.rankAgg || 'soma') : rs.length;
+      if (bestVal == null || (cfg.rankDir === 'menor' ? val < bestVal : val > bestVal)) { bestVal = val; best = k; }
+    }
+    return best == null ? '—' : best;
+  }
+  function formatValue(value, fmt) {
+    if (value == null || isNaN(value)) return '—';
+    if (fmt === 'moeda') return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    if (fmt === 'percentual') return value.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
+    if (fmt === 'tempo') return value.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' min';
+    return value.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+  }
+  function groupData(cfg) {
+    const rows = applyFilters(state.rows), xCol = colByName(cfg.x), buckets = new Map();
+    for (const r of rows) {
+      let key = r[cfg.x];
+      if (xCol && xCol.type === 'data') {
+        const d = parseDate(key); if (!d) continue;
+        if (cfg.dateGroup === 'ano') key = String(d.getFullYear());
+        else if (cfg.dateGroup === 'dia') key = d.toISOString().slice(0, 10);
+        else key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      }
+      key = key == null || key === '' ? '(vazio)' : String(key);
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(r);
+    }
+    let entries = Array.from(buckets.entries()).map(([k, rs]) => [k, cfg.agg === 'contagem' ? rs.length : aggregate(rs, cfg.y, cfg.agg)]);
+    if (xCol && xCol.type === 'data') entries.sort((a, b) => a[0] < b[0] ? -1 : 1);
+    else entries.sort((a, b) => b[1] - a[1]);
+    entries = entries.slice(0, cfg.type === 'pie' ? 8 : 30);
+    return { labels: entries.map((e) => e[0]), values: entries.map((e) => e[1]) };
+  }
+
+  // ============================================================
+  //  RENDER (editor)
+  // ============================================================
+  function renderComponent(comp) {
+    const body = $('#body-' + comp.id); if (!body) return;
+    const titleEl = $('#title-' + comp.id); if (titleEl) titleEl.textContent = comp.title;
+    if (charts[comp.id]) { charts[comp.id].destroy(); delete charts[comp.id]; }
+    const c1 = state.theme.color1;
+
+    if (comp.type === 'kpi') {
+      const disp = comp.config.mode === 'rotulo' ? esc(computeKpiLabel(comp.config)) : esc(formatValue(computeKpi(comp.config), comp.config.format));
+      const txtCls = comp.config.mode === 'rotulo' ? ' kpi-text' : '';
+      body.innerHTML = '<div class="kpi-value' + txtCls + '" style="color:' + c1 + '">' + disp + '</div>' +
+        '<div class="kpi-sub">' + esc(kpiSubtitle(comp.config)) + '</div>';
+    } else if (comp.type === 'table') {
+      body.innerHTML = renderTable(comp.config);
+    } else if (comp.type === 'chart') {
+      body.innerHTML = '<canvas id="cv-' + comp.id + '"></canvas>';
+      const { labels, values } = groupData(comp.config);
+      const isLine = comp.config.type === 'line';
+      const colors = comp.config.type === 'pie' ? palette(labels.length) : c1;
+      charts[comp.id] = new Chart($('#cv-' + comp.id).getContext('2d'), {
+        type: comp.config.type === 'column' ? 'bar' : comp.config.type,
+        data: { labels, datasets: [{ label: comp.config.y || 'Contagem', data: values,
+          backgroundColor: colors, borderColor: c1, borderWidth: 2, fill: false, tension: 0.3, pointRadius: isLine ? 3 : 0 }] },
+        options: { indexAxis: comp.config.type === 'bar' ? 'y' : 'x', responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: comp.config.type === 'pie' } },
+          scales: comp.config.type === 'pie' ? {} : { x: { ticks: { autoSkip: true, maxRotation: 0 } }, y: { beginAtZero: true } } }
+      });
+    }
+  }
+  function kpiSubtitle(cfg) {
+    if (cfg.mode === 'diferenca') return cfg.column + ' − ' + cfg.column2;
+    if (cfg.mode === 'reducao') return 'Redução % (' + cfg.column + ' → ' + cfg.column2 + ')';
+    if (cfg.mode === 'crescimento') return 'Crescimento % (' + cfg.column + ' → ' + cfg.column2 + ')';
+    if (cfg.mode === 'rotulo') { const dir = cfg.rankDir === 'menor' ? 'Menor' : 'Maior'; const base = cfg.rankColumn ? (dir + ' ' + (cfg.rankAgg || 'soma') + ' de ' + cfg.rankColumn) : 'Mais frequente'; return base + ' · por ' + cfg.labelColumn; }
+    return (cfg.agg || '').toUpperCase() + ' de ' + cfg.column;
+  }
+  function renderTable(cfg) {
+    const rows = applyFilters(state.rows);
+    const cols = cfg.columns && cfg.columns.length ? cfg.columns : state.columns.slice(0, 4).map((c) => c.name);
+    let sorted = rows.slice();
+    if (cfg.sortBy) { const col = colByName(cfg.sortBy); sorted.sort((a, b) => (col && isNumeric(col.type)) ? (parseNumber(b[cfg.sortBy]) || 0) - (parseNumber(a[cfg.sortBy]) || 0) : String(a[cfg.sortBy]).localeCompare(String(b[cfg.sortBy]))); }
+    sorted = sorted.slice(0, cfg.limit || 10);
+    return '<div class="tbl-wrap"><table><thead><tr>' + cols.map((c) => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>' +
+      sorted.map((r) => '<tr>' + cols.map((c) => '<td>' + esc(r[c]) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
+  }
+  function componentShell(comp) {
+    const locked = state.role === 'viewer';
+    return '<div class="comp-card">' +
+      '<div class="comp-head"><span class="comp-title" id="title-' + comp.id + '"></span>' +
+      (locked ? '' : '<span class="comp-actions">' +
+        '<button class="icon-btn" data-act="edit" data-id="' + comp.id + '" title="Editar">✎</button>' +
+        '<button class="icon-btn" data-act="dup" data-id="' + comp.id + '" title="Duplicar">⎘</button>' +
+        '<button class="icon-btn" data-act="unplace" data-id="' + comp.id + '" title="Voltar para a bandeja">↩</button>' +
+        '<button class="icon-btn" data-act="del" data-id="' + comp.id + '" title="Excluir">✕</button></span>') +
+      '</div><div class="comp-body" id="body-' + comp.id + '"></div></div>';
+  }
+
+  // ============================================================
+  //  GRID CUSTOMIZADO (drag & drop estilo "patches")
+  // ============================================================
+  const byId = (id) => state.components.find((c) => c.id === id);
+  const typeIcon = (t) => ({ kpi: '▣', chart: '◔', table: '▦' }[t] || '▣');
+  const typeLabel = (t) => ({ kpi: 'KPI', chart: 'Gráfico', table: 'Tabela' }[t] || 'Bloco');
+
+  function gridRows() {
+    let rows = BASE_ROWS;
+    state.components.forEach((c) => { if (c.placed) rows = Math.max(rows, (c.y || 0) + (c.h || 1)); });
+    return rows + dragExtra;
+  }
+  function layoutGrid() {
+    const g = $('#grid'); if (!g) return;
+    Object.values(charts).forEach((c) => c.destroy());
+    for (const k in charts) delete charts[k];
+    const rows = gridRows();
+    g.style.setProperty('--rows', rows);
+    let html = '';
+    for (let r = 0; r < rows; r++) for (let c = 0; c < COLS; c++)
+      html += '<div class="cell-slot" data-col="' + c + '" data-row="' + r + '" style="grid-column:' + (c + 1) + ';grid-row:' + (r + 1) + '"></div>';
+    state.components.filter((c) => c.placed).forEach((comp) => {
+      html += '<div class="lb-item' + (comp.id === selectedId ? ' selected' : '') + '" data-id="' + comp.id + '" style="grid-column:' + ((comp.x || 0) + 1) + '/span ' + (comp.w || 2) + ';grid-row:' + ((comp.y || 0) + 1) + '/span ' + (comp.h || 1) + '">' +
+        componentShell(comp) + '<div class="resize-handle" data-id="' + comp.id + '" title="Redimensionar"></div></div>';
+    });
+    g.innerHTML = html;
+    state.components.filter((c) => c.placed).forEach(renderComponent);
+    updateEmptyHint();
+  }
+  function renderTray() {
+    const wrap = $('#trayItems'); if (!wrap) return;
+    const unplaced = state.components.filter((c) => !c.placed);
+    if (!unplaced.length) {
+      wrap.innerHTML = '<div class="tray-empty">Tudo no painel. Crie novos blocos com <strong>+ KPI</strong>, <strong>+ Gráfico</strong> ou <strong>+ Tabela</strong>.</div>';
+      return;
+    }
+    wrap.innerHTML = unplaced.map((c) =>
+      '<div class="tray-chip" data-id="' + c.id + '"><span class="chip-ic">' + typeIcon(c.type) + '</span><span class="chip-t">' + esc(c.title) + '</span><span class="chip-tag">' + typeLabel(c.type) + '</span></div>'
+    ).join('');
+  }
+  function refreshAll() { state.components.filter((c) => c.placed).forEach(renderComponent); }
+  function updateEmptyHint() {
+    const placed = state.components.filter((c) => c.placed).length;
+    const hint = $('#emptyHint'); if (hint) hint.classList.toggle('hidden', placed > 0);
+  }
+  function selectId(id) {
+    selectedId = id;
+    $$('#grid .lb-item').forEach((el) => el.classList.toggle('selected', el.dataset.id === id));
+  }
+  function placeAt(comp, col, row) {
+    comp.x = Math.max(0, Math.min(col, COLS - (comp.w || 1)));
+    comp.y = Math.max(0, row);
+    comp.placed = true;
+  }
+  function newComponent(comp) {
+    comp.placed = false;
+    state.components.push(comp);
+    save(); renderTray();
+    const t = $('#saveStatus'); if (t) { t.textContent = '✓ "' + comp.title + '" pronto — arraste para o painel'; t.classList.add('show'); clearTimeout(saveTimer); saveTimer = setTimeout(() => t.classList.remove('show'), 2600); }
+  }
+
+  // ---------- Sistema de arraste (pointer events: mouse + toque) ----------
+  function slotAt(x, y) {
+    const els = document.elementsFromPoint(x, y);
+    for (const el of els) if (el.classList && el.classList.contains('cell-slot')) return el;
+    return null;
+  }
+  function clearHover() { if (lastHover) { lastHover.forEach((el) => el.classList.remove('drop-hover')); lastHover = null; } }
+  function highlightArea(col, row, w, h) {
+    col = Math.max(0, Math.min(col, COLS - w)); row = Math.max(0, row);
+    const slots = [];
+    for (let r = row; r < row + h; r++) for (let c = col; c < col + w; c++) {
+      const el = $('#grid .cell-slot[data-col="' + c + '"][data-row="' + r + '"]');
+      if (el) slots.push(el);
+    }
+    clearHover();
+    slots.forEach((el) => el.classList.add('drop-hover'));
+    lastHover = slots.length ? slots : null;
+    return { col, row };
+  }
+
+  function onPointerDown(e) {
+    if (state.role === 'viewer') return;
+    if (e.target.closest('[data-act]')) return;
+    const handle = e.target.closest('.resize-handle');
+    if (handle) { startResize(e, handle.dataset.id); return; }
+    const chip = e.target.closest('#trayItems .tray-chip');
+    if (chip) { startCreate(e, chip.dataset.id); return; }
+    const item = e.target.closest('#grid .lb-item');
+    if (item) { startMove(e, item.dataset.id); return; }
+    if (e.target.closest('#grid .cell-slot')) selectId(null);
+  }
+  function beginDragListeners() {
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp, { once: true });
+  }
+  function startMove(e, id) {
+    const comp = byId(id); if (!comp) return;
+    selectId(id);
+    dragExtra = 3; layoutGrid();
+    const item = $('#grid .lb-item[data-id="' + id + '"]');
+    drag = { mode: 'move', id, item, startX: e.clientX, startY: e.clientY, moved: false };
+    if (item) item.classList.add('dragging');
+    beginDragListeners(); e.preventDefault();
+  }
+  function startResize(e, id) {
+    const comp = byId(id); if (!comp) return;
+    selectId(id);
+    dragExtra = 3; layoutGrid();
+    const item = $('#grid .lb-item[data-id="' + id + '"]');
+    drag = { mode: 'resize', id, item, moved: true, previewW: comp.w, previewH: comp.h };
+    if (item) item.classList.add('dragging');
+    beginDragListeners(); e.preventDefault(); e.stopPropagation();
+  }
+  function startCreate(e, id) {
+    const comp = byId(id); if (!comp) return;
+    const ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.innerHTML = '<span>' + typeIcon(comp.type) + '</span> ' + esc(comp.title);
+    document.body.appendChild(ghost);
+    dragExtra = 3; layoutGrid();
+    drag = { mode: 'create', id, ghost, offX: 70, offY: 18, startX: e.clientX, startY: e.clientY, moved: false };
+    ghost.style.left = (e.clientX - 70) + 'px'; ghost.style.top = (e.clientY - 18) + 'px';
+    beginDragListeners(); e.preventDefault();
+  }
+  function onPointerMove(e) {
+    if (!drag) return;
+    const dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) < MOVE_THRESH) return;
+    drag.moved = true;
+    if (drag.mode === 'move' && drag.item) {
+      drag.item.style.pointerEvents = 'none';
+      drag.item.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      drag.item.style.zIndex = '50';
+      const comp = byId(drag.id), slot = slotAt(e.clientX, e.clientY);
+      if (slot) { const t = highlightArea(+slot.dataset.col, +slot.dataset.row, comp.w || 1, comp.h || 1); drag.dropCol = t.col; drag.dropRow = t.row; }
+      else { clearHover(); drag.dropCol = null; }
+    } else if (drag.mode === 'resize' && drag.item) {
+      const comp = byId(drag.id), slot = slotAt(e.clientX, e.clientY);
+      if (slot) {
+        const w = Math.max(1, Math.min(COLS - comp.x, (+slot.dataset.col) - comp.x + 1));
+        const h = Math.max(1, (+slot.dataset.row) - comp.y + 1);
+        drag.previewW = w; drag.previewH = h;
+        drag.item.style.gridColumn = (comp.x + 1) + '/span ' + w;
+        drag.item.style.gridRow = (comp.y + 1) + '/span ' + h;
+        if (charts[comp.id]) charts[comp.id].resize();
+      }
+    } else if (drag.mode === 'create') {
+      drag.ghost.style.left = (e.clientX - drag.offX) + 'px';
+      drag.ghost.style.top = (e.clientY - drag.offY) + 'px';
+      const comp = byId(drag.id), slot = slotAt(e.clientX, e.clientY);
+      if (slot) { const t = highlightArea(+slot.dataset.col, +slot.dataset.row, comp.w || 1, comp.h || 1); drag.dropCol = t.col; drag.dropRow = t.row; }
+      else { clearHover(); drag.dropCol = null; }
+    }
+  }
+  function onPointerUp() {
+    window.removeEventListener('pointermove', onPointerMove);
+    if (!drag) { return; }
+    clearHover();
+    const hasDrop = drag.dropCol != null;
+    if (drag.mode === 'move') {
+      if (drag.item) { drag.item.style.pointerEvents = ''; drag.item.style.transform = ''; drag.item.style.zIndex = ''; drag.item.classList.remove('dragging'); }
+      if (drag.moved && hasDrop) { placeAt(byId(drag.id), drag.dropCol, drag.dropRow); dragExtra = 0; layoutGrid(); save(); }
+      else { dragExtra = 0; layoutGrid(); }
+    } else if (drag.mode === 'resize') {
+      const comp = byId(drag.id); comp.w = drag.previewW; comp.h = drag.previewH;
+      dragExtra = 0; layoutGrid(); save();
+    } else if (drag.mode === 'create') {
+      drag.ghost.remove();
+      if (hasDrop) { const comp = byId(drag.id); comp.placed = true; placeAt(comp, drag.dropCol, drag.dropRow); save(); renderTray(); }
+      dragExtra = 0; layoutGrid();
+    }
+    drag = null;
+  }
+
+  // ============================================================
+  //  UPLOAD
+  // ============================================================
+  function handleFile(file) {
+    const err = $('#uploadError'); err.textContent = '';
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['xlsx', 'xls', 'csv'].includes(ext)) { err.textContent = 'Formato não suportado. Use .xlsx, .xls ou .csv.'; return; }
+    if (file.size > 10 * 1024 * 1024) { err.textContent = 'Arquivo muito grande (limite 10 MB).'; return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+        const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '', raw: true });
+        if (!json.length) { err.textContent = 'O arquivo está vazio ou sem linhas válidas.'; return; }
+        const headers = Object.keys(json[0]);
+        if (!headers.length) { err.textContent = 'Não foi possível identificar as colunas.'; return; }
+        const dup = headers.filter((h, i) => headers.indexOf(h) !== i);
+        if (dup.length) { err.textContent = 'Colunas duplicadas: ' + dup.join(', '); return; }
+        state.rows = json;
+        state.columns = headers.map((h) => ({ name: h, type: detectType(json.map((r) => r[h])), description: '' }));
+        state.meta = { fileName: file.name, size: file.size, type: ext, uploadDate: new Date().toISOString(), rowCount: json.length, colCount: headers.length };
+        state.components = []; state.filters = [];
+        state.theme = Object.assign({}, DEFAULT_THEME, { title: file.name.replace(/\.[^.]+$/, '') });
+        showPreview();
+      } catch (ex) { err.textContent = 'Erro ao ler o arquivo: ' + ex.message; }
+    };
+    reader.onerror = () => { err.textContent = 'Falha ao carregar o arquivo.'; };
+    reader.readAsArrayBuffer(file);
+  }
+  const TYPE_BADGE = { numero: 'Número', moeda: 'Moeda', percentual: 'Percentual', data: 'Data', categoria: 'Categoria', texto: 'Texto' };
+  function showPreview() {
+    $('#screen-upload').classList.add('hidden'); $('#screen-dashboard').classList.add('hidden'); $('#screen-preview').classList.remove('hidden');
+    $('#previewMeta').innerHTML = '<strong>' + esc(state.meta.fileName) + '</strong> · ' + state.meta.rowCount + ' linhas · ' + state.meta.colCount + ' colunas · ' + (state.meta.size / 1024).toFixed(1) + ' KB';
+    $('#tableDescription').value = state.meta.tableDescription || '';
+    $('#columnDescriptions').innerHTML = state.columns.map((c, i) => '<div class="context-column"><label title="' + esc(c.name) + '">' + esc(c.name) + ' <span class="type-badge" data-t="' + c.type + '">' + TYPE_BADGE[c.type] + '</span></label><input data-column-description="' + i + '" value="' + esc(c.description || '') + '" placeholder="Ex.: valor total da venda"></div>').join('');
+    let html = '<div class="tbl-wrap"><table><thead><tr>' + state.columns.map((c) => '<th>' + esc(c.name) + '<span class="type-badge" data-t="' + c.type + '">' + TYPE_BADGE[c.type] + '</span></th>').join('') + '</tr></thead><tbody>';
+    state.rows.slice(0, 8).forEach((r) => { html += '<tr>' + state.columns.map((c) => '<td>' + esc(r[c.name]) + '</td>').join('') + '</tr>'; });
+    $('#previewTable').innerHTML = html + '</tbody></table></div>';
+  }
+  function bindContextFields() {
+    const tableDescription = $('#tableDescription');
+    tableDescription.oninput = () => { state.meta.tableDescription = tableDescription.value; save(); };
+    $('#columnDescriptions').oninput = (e) => {
+      const input = e.target.closest('[data-column-description]'); if (!input) return;
+      const column = state.columns[Number(input.dataset.columnDescription)];
+      if (column) { column.description = input.value; save(); }
+    };
+  }
+  function goToDashboard() {
+    $('#screen-preview').classList.add('hidden'); $('#screen-upload').classList.add('hidden'); $('#screen-dashboard').classList.remove('hidden');
+    $('#dashFileName').textContent = state.meta.fileName;
+    $('#screen-dashboard').classList.toggle('viewer', state.role === 'viewer');
+    layoutGrid(); renderTray(); renderFilterBar();
+  }
+
+  // ============================================================
+  //  AUTO-MONTAGEM (gera o painel a partir da planilha)
+  // ============================================================
+  function fmtForCol(name) { const c = colByName(name); if (!c) return 'numero'; if (c.type === 'moeda') return 'moeda'; if (c.type === 'percentual') return 'percentual'; return 'numero'; }
+  function autoLayout(list) {
+    const occ = [];
+    const fits = (x, y, w, h) => { if (x + w > COLS) return false; for (let r = y; r < y + h; r++) { if (occ[r]) for (let c = x; c < x + w; c++) if (occ[r][c]) return false; } return true; };
+    const fill = (x, y, w, h) => { for (let r = y; r < y + h; r++) { occ[r] = occ[r] || []; for (let c = x; c < x + w; c++) occ[r][c] = true; } };
+    list.forEach((comp) => { const w = Math.min(comp.w || 2, COLS), h = comp.h || 1; let done = false; for (let y = 0; !done && y < 200; y++) for (let x = 0; x <= COLS - w; x++) { if (fits(x, y, w, h)) { comp.x = x; comp.y = y; comp.w = w; comp.h = h; fill(x, y, w, h); done = true; break; } } });
+  }
+  function autoBuild() {
+    if (!state.columns.length) { alert('Envie uma planilha primeiro.'); return; }
+    if (state.components.length && !confirm('A IA vai recriar o painel automaticamente, substituindo os componentes atuais. Continuar?')) return;
+    const numCols = state.columns.filter((c) => isNumeric(c.type)).map((c) => c.name);
+    const catCols = state.columns.filter((c) => c.type === 'categoria' || c.type === 'texto').map((c) => c.name);
+    const dateCols = state.columns.filter((c) => c.type === 'data').map((c) => c.name);
+    const comps = [];
+    const add = (o) => { o.id = uid(); o.placed = true; o.createdAt = new Date().toISOString(); comps.push(o); };
+    // --- KPIs (linha de topo) ---
+    if (numCols[0]) add({ type: 'kpi', title: 'Total de ' + numCols[0], config: { mode: 'simples', column: numCols[0], agg: 'soma', format: fmtForCol(numCols[0]) }, w: 2, h: 1 });
+    add({ type: 'kpi', title: 'Registros', config: { mode: 'simples', column: state.columns[0].name, agg: 'contagem', format: 'numero' }, w: 2, h: 1 });
+    if (numCols[1]) add({ type: 'kpi', title: 'Média de ' + numCols[1], config: { mode: 'simples', column: numCols[1], agg: 'media', format: fmtForCol(numCols[1]) }, w: 2, h: 1 });
+    else if (numCols[0]) add({ type: 'kpi', title: 'Média de ' + numCols[0], config: { mode: 'simples', column: numCols[0], agg: 'media', format: fmtForCol(numCols[0]) }, w: 2, h: 1 });
+    if (catCols[0] && numCols[0]) add({ type: 'kpi', title: 'Destaque · ' + catCols[0], config: { mode: 'rotulo', labelColumn: catCols[0], rankColumn: numCols[0], rankAgg: 'soma', rankDir: 'maior' }, w: 2, h: 1 });
+    // --- Gráficos ---
+    if (dateCols[0] && numCols[0]) add({ type: 'chart', title: numCols[0] + ' ao longo do tempo', config: { type: 'line', x: dateCols[0], y: numCols[0], agg: 'soma', dateGroup: 'mes' }, w: 3, h: 2 });
+    if (catCols[0] && numCols[0]) add({ type: 'chart', title: numCols[0] + ' por ' + catCols[0], config: { type: 'column', x: catCols[0], y: numCols[0], agg: 'soma', dateGroup: 'mes' }, w: 3, h: 2 });
+    else if (catCols[0]) add({ type: 'chart', title: 'Distribuição por ' + catCols[0], config: { type: 'pie', x: catCols[0], y: numCols[0] || '', agg: numCols[0] ? 'soma' : 'contagem', dateGroup: 'mes' }, w: 3, h: 2 });
+    // --- Tabela (completa o painel) ---
+    if (comps.filter((c) => c.type === 'chart').length === 0 || comps.length < 5) add({ type: 'table', title: 'Principais registros', config: { columns: state.columns.slice(0, 4).map((c) => c.name), sortBy: numCols[0] || '', limit: 8 }, w: 3, h: 2 });
+    const chosen = comps.slice(0, 6);
+    autoLayout(chosen);
+    state.components = chosen; selectedId = null;
+    save(); layoutGrid(); renderTray();
+    const t = $('#saveStatus'); if (t) { t.textContent = '✨ Painel montado com ' + chosen.length + ' componentes'; t.classList.add('show'); clearTimeout(saveTimer); saveTimer = setTimeout(() => t.classList.remove('show'), 2800); }
+  }
+
+  // ============================================================
+  //  MODAIS
+  // ============================================================
+  function openModal(id) { $('#' + id).classList.add('open'); }
+  function closeModal(id) { $('#' + id).classList.remove('open'); }
+  function field(label, control) { return '<div class="field"><label>' + label + '</label>' + control + '</div>'; }
+  function opt(v, l, cur) { return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + l + '</option>'; }
+  function colOptions(filter) { return state.columns.filter(filter || (() => true)).map((c) => '<option value="' + esc(c.name) + '">' + esc(c.name) + ' (' + TYPE_BADGE[c.type] + ')</option>').join(''); }
+
+  // ----- KPI -----
+  function openKpiModal(existing) {
+    editingId = existing ? existing.id : null;
+    const cfg = existing ? existing.config : { mode: 'simples', agg: 'soma', format: 'numero' };
+    $('#kpiModalTitle').textContent = existing ? 'Editar KPI' : 'Adicionar KPI';
+    $('#kpiForm').innerHTML =
+      field('O que você quer medir?', '<select id="kpiMode">' +
+        opt('simples', 'Um valor (soma, média, etc.)', cfg.mode) + opt('diferenca', 'Diferença entre duas colunas', cfg.mode) +
+        opt('reducao', 'Percentual de redução', cfg.mode) + opt('crescimento', 'Percentual de crescimento', cfg.mode) +
+        opt('rotulo', 'Um nome / rótulo (ex.: quem mais vendeu)', cfg.mode) + '</select>') +
+      '<div id="kpiSimple">' +
+        field('Qual coluna deseja usar?', '<select id="kpiColumn">' + colOptions() + '</select>') +
+        field('Como calcular esse número?', '<select id="kpiAgg">' +
+          opt('soma', 'Somar valores', cfg.agg) + opt('media', 'Calcular média', cfg.agg) + opt('max', 'Maior valor', cfg.agg) +
+          opt('min', 'Menor valor', cfg.agg) + opt('contagem', 'Contar registros', cfg.agg) + opt('distinta', 'Contar valores distintos', cfg.agg) + '</select>') + '</div>' +
+      '<div id="kpiDouble" class="hidden">' +
+        field('Primeira coluna (antes)', '<select id="kpiColA">' + colOptions((c) => isNumeric(c.type)) + '</select>') +
+        field('Segunda coluna (depois)', '<select id="kpiColB">' + colOptions((c) => isNumeric(c.type)) + '</select>') + '</div>' +
+      '<div id="kpiLabel" class="hidden">' +
+        field('Qual coluna tem o nome/rótulo?', '<select id="kpiLabelCol">' + colOptions() + '</select>') +
+        field('Classificar por qual valor?', '<select id="kpiRankCol"><option value="">Quantidade de registros</option>' + colOptions((c) => isNumeric(c.type)) + '</select>') +
+        field('Como classificar esse valor?', '<select id="kpiRankAgg">' +
+          opt('soma', 'Somar', cfg.rankAgg) + opt('media', 'Média', cfg.rankAgg) + opt('max', 'Maior valor', cfg.rankAgg) + opt('min', 'Menor valor', cfg.rankAgg) + '</select>') +
+        field('Mostrar quem tem o…', '<select id="kpiRankDir">' +
+          opt('maior', 'Maior valor (topo do ranking)', cfg.rankDir) + opt('menor', 'Menor valor', cfg.rankDir) + '</select>') + '</div>' +
+      field('Título do KPI', '<input id="kpiTitle" placeholder="Ex.: Economia total" value="' + esc(existing ? existing.title : '') + '">') +
+      '<div id="kpiFormatField">' + field('Formato de exibição', '<select id="kpiFormat">' +
+        opt('numero', 'Número', cfg.format) + opt('moeda', 'Moeda (R$)', cfg.format) + opt('percentual', 'Percentual (%)', cfg.format) + opt('tempo', 'Tempo (min)', cfg.format) + '</select>') + '</div>';
+    if (existing) { if (cfg.column) { $('#kpiColumn').value = cfg.column; $('#kpiColA').value = cfg.column; } if (cfg.column2) $('#kpiColB').value = cfg.column2; if (cfg.labelColumn) $('#kpiLabelCol').value = cfg.labelColumn; if (cfg.rankColumn) $('#kpiRankCol').value = cfg.rankColumn; }
+    const toggle = () => { const m = $('#kpiMode').value; $('#kpiSimple').classList.toggle('hidden', m !== 'simples'); $('#kpiDouble').classList.toggle('hidden', !(m === 'diferenca' || m === 'reducao' || m === 'crescimento')); $('#kpiLabel').classList.toggle('hidden', m !== 'rotulo'); $('#kpiFormatField').classList.toggle('hidden', m === 'rotulo'); if (m === 'reducao' || m === 'crescimento') $('#kpiFormat').value = 'percentual'; };
+    $('#kpiMode').onchange = toggle; toggle();
+    openModal('kpiModal');
+  }
+  function saveKpi() {
+    const mode = $('#kpiMode').value;
+    let cfg;
+    if (mode === 'rotulo') { cfg = { mode, labelColumn: $('#kpiLabelCol').value, rankColumn: $('#kpiRankCol').value, rankAgg: $('#kpiRankAgg').value, rankDir: $('#kpiRankDir').value }; }
+    else {
+      cfg = { mode, format: $('#kpiFormat').value };
+      if (mode === 'simples') { cfg.column = $('#kpiColumn').value; cfg.agg = $('#kpiAgg').value; }
+      else { cfg.column = $('#kpiColA').value; cfg.column2 = $('#kpiColB').value; }
+    }
+    const title = $('#kpiTitle').value.trim() || 'KPI';
+    if (editingId) { const c = state.components.find((x) => x.id === editingId); c.title = title; c.config = cfg; c.updatedAt = new Date().toISOString(); if (c.placed) renderComponent(c); else renderTray(); save(); }
+    else { newComponent({ id: uid(), type: 'kpi', title, config: cfg, x: 0, y: 0, w: 2, h: 1, createdAt: new Date().toISOString() }); }
+    closeModal('kpiModal');
+  }
+
+  // ----- Gráfico -----
+  function openChartModal(existing) {
+    editingId = existing ? existing.id : null;
+    const cfg = existing ? existing.config : { type: 'column', agg: 'soma', dateGroup: 'mes' };
+    $('#chartModalTitle').textContent = existing ? 'Editar gráfico' : 'Adicionar gráfico';
+    $('#chartForm').innerHTML =
+      field('Tipo de gráfico', '<div class="chart-type-grid">' +
+        ['column:Colunas:█', 'bar:Barras:▬', 'line:Linha:╱', 'pie:Pizza:◐'].map((s) => { const [v, l, ic] = s.split(':'); return '<label class="ct-opt' + (cfg.type === v ? ' sel' : '') + '"><input type="radio" name="ctype" value="' + v + '"' + (cfg.type === v ? ' checked' : '') + '><span class="ct-ic">' + ic + '</span>' + l + '</label>'; }).join('') + '</div>') +
+      field('Qual coluna no eixo X? (categorias / datas)', '<select id="chartX">' + colOptions() + '</select>') +
+      field('Qual coluna no eixo Y? (valores)', '<select id="chartY">' + colOptions((c) => isNumeric(c.type)) + '</select>') +
+      field('Como calcular?', '<select id="chartAgg">' + opt('soma', 'Somar', cfg.agg) + opt('media', 'Média', cfg.agg) + opt('max', 'Máximo', cfg.agg) + opt('min', 'Mínimo', cfg.agg) + opt('contagem', 'Contar registros', cfg.agg) + '</select>') +
+      field('Agrupar datas por', '<select id="chartDateGroup">' + opt('dia', 'Dia', cfg.dateGroup) + opt('mes', 'Mês', cfg.dateGroup) + opt('ano', 'Ano', cfg.dateGroup) + '</select>') +
+      field('Título do gráfico', '<input id="chartTitle" placeholder="Ex.: Custo por mês" value="' + esc(existing ? existing.title : '') + '">') +
+      '<div class="hint" id="chartHint"></div>';
+    if (existing) { if (cfg.x) $('#chartX').value = cfg.x; if (cfg.y) $('#chartY').value = cfg.y; }
+    $$('input[name=ctype]').forEach((r) => r.onchange = () => { $$('.ct-opt').forEach((o) => o.classList.remove('sel')); r.closest('.ct-opt').classList.add('sel'); validateChart(); });
+    $('#chartX').onchange = validateChart; $('#chartAgg').onchange = validateChart;
+    validateChart(); openModal('chartModal');
+  }
+  function validateChart() {
+    const type = ($$('input[name=ctype]').find((r) => r.checked) || {}).value;
+    const xCol = colByName($('#chartX').value); let msg = '';
+    if (type === 'line' && xCol && xCol.type !== 'data') msg = 'Dica: gráficos de linha funcionam melhor com colunas de data.';
+    if (type === 'pie' && xCol && !['categoria', 'texto'].includes(xCol.type)) msg = 'Dica: pizza é ideal para categorias com poucos grupos.';
+    const dg = $('#chartDateGroup'); if (dg) dg.closest('.field').style.display = (xCol && xCol.type === 'data') ? '' : 'none';
+    $('#chartY').closest('.field').style.display = $('#chartAgg').value === 'contagem' ? 'none' : '';
+    $('#chartHint').textContent = msg;
+  }
+  function saveChart() {
+    const type = ($$('input[name=ctype]').find((r) => r.checked) || {}).value;
+    const cfg = { type, x: $('#chartX').value, y: $('#chartY').value, agg: $('#chartAgg').value, dateGroup: $('#chartDateGroup').value };
+    const title = $('#chartTitle').value.trim() || 'Gráfico';
+    if (editingId) { const c = state.components.find((x) => x.id === editingId); c.title = title; c.config = cfg; c.updatedAt = new Date().toISOString(); if (c.placed) renderComponent(c); else renderTray(); save(); }
+    else { newComponent({ id: uid(), type: 'chart', title, config: cfg, x: 0, y: 0, w: 3, h: 2, createdAt: new Date().toISOString() }); }
+    closeModal('chartModal');
+  }
+
+  // ----- Tabela -----
+  function openTableModal(existing) {
+    editingId = existing ? existing.id : null;
+    const cfg = existing ? existing.config : { columns: [], limit: 10 };
+    $('#tableModalTitle').textContent = existing ? 'Editar tabela' : 'Adicionar tabela';
+    $('#tableForm').innerHTML =
+      field('Título da tabela', '<input id="tblTitle" placeholder="Ex.: Ranking de projetos" value="' + esc(existing ? existing.title : '') + '">') +
+      field('Colunas a exibir', '<div class="check-grid">' + state.columns.map((c) => '<label class="chk"><input type="checkbox" value="' + esc(c.name) + '"' + (cfg.columns && cfg.columns.includes(c.name) ? ' checked' : '') + '> ' + esc(c.name) + '</label>').join('') + '</div>') +
+      field('Ordenar por', '<select id="tblSort"><option value="">Sem ordenação</option>' + colOptions() + '</select>') +
+      field('Quantidade de linhas', '<input id="tblLimit" type="number" min="1" max="100" value="' + (cfg.limit || 10) + '">');
+    if (cfg.sortBy) $('#tblSort').value = cfg.sortBy;
+    openModal('tableModal');
+  }
+  function saveTable() {
+    const columns = $$('#tableForm .chk input:checked').map((i) => i.value);
+    const cfg = { columns: columns.length ? columns : state.columns.slice(0, 4).map((c) => c.name), sortBy: $('#tblSort').value, limit: parseInt($('#tblLimit').value) || 10 };
+    const title = $('#tblTitle').value.trim() || 'Tabela';
+    if (editingId) { const c = state.components.find((x) => x.id === editingId); c.title = title; c.config = cfg; c.updatedAt = new Date().toISOString(); if (c.placed) renderComponent(c); else renderTray(); save(); }
+    else { newComponent({ id: uid(), type: 'table', title, config: cfg, x: 0, y: 0, w: 3, h: 2, createdAt: new Date().toISOString() }); }
+    closeModal('tableModal');
+  }
+
+  // ============================================================
+  //  FILTROS
+  // ============================================================
+  function renderFilterBar() {
+    $('#filterChips').innerHTML = state.filters.map((f) => '<span class="chip">' + esc(f.column) + ' ' + opLabel(f.op) + ' ' + esc(f.value) + (f.op === 'between' ? '–' + esc(f.value2) : '') + ' <b data-rm="' + f.id + '">✕</b></span>').join('');
+    $('#clearFilters').classList.toggle('hidden', !state.filters.length);
+  }
+  function opLabel(op) { return { eq: '=', gte: '≥', lte: '≤', between: 'entre', contains: 'contém' }[op] || op; }
+  function openFilterModal() {
+    $('#filterForm').innerHTML = field('Coluna', '<select id="fCol">' + colOptions() + '</select>') + field('Condição', '<select id="fOp"></select>') + '<div id="fValues"></div>';
+    const rebuildVals = () => {
+      const col = colByName($('#fCol').value), op = $('#fOp').value;
+      if (op === 'eq' && (col.type === 'categoria' || col.type === 'texto')) {
+        const vals = Array.from(new Set(state.rows.map((r) => r[col.name]))).filter((v) => v !== '').slice(0, 100);
+        $('#fValues').innerHTML = field('Valor', '<select id="fVal">' + vals.map((v) => '<option>' + esc(v) + '</option>').join('') + '</select>');
+      } else if (op === 'between') { $('#fValues').innerHTML = field('De', '<input id="fVal">') + field('Até', '<input id="fVal2">'); }
+      else { $('#fValues').innerHTML = field('Valor', '<input id="fVal">'); }
+    };
+    const rebuildOps = () => {
+      const col = colByName($('#fCol').value); let ops;
+      if (isNumeric(col.type)) ops = [['eq', '='], ['gte', 'maior ou igual'], ['lte', 'menor ou igual'], ['between', 'entre']];
+      else if (col.type === 'data') ops = [['gte', 'a partir de'], ['lte', 'até'], ['between', 'entre']];
+      else ops = [['eq', 'igual a'], ['contains', 'contém']];
+      $('#fOp').innerHTML = ops.map((o) => '<option value="' + o[0] + '">' + o[1] + '</option>').join(''); rebuildVals();
+    };
+    $('#fCol').onchange = rebuildOps; $('#fOp').onchange = rebuildVals; rebuildOps(); openModal('filterModal');
+  }
+  function saveFilter() {
+    const f = { id: uid(), column: $('#fCol').value, op: $('#fOp').value, value: $('#fVal') ? $('#fVal').value : '', value2: $('#fVal2') ? $('#fVal2').value : '' };
+    if (!f.value) return;
+    state.filters.push(f); renderFilterBar(); refreshAll(); save(); closeModal('filterModal');
+  }
+
+  // ============================================================
+  //  EXPORTAÇÃO .html (pergunta título + 2 cores)
+  // ============================================================
+  function openExportModal() {
+    if (!state.components.length) { alert('Adicione ao menos um componente antes de exportar.'); return; }
+    $('#expTitle').value = state.theme.title || 'Meu Dashboard';
+    $('#expC1').value = state.theme.color1; $('#expC2').value = state.theme.color2;
+    syncExpPreview(); openExportListeners(); openModal('exportModal');
+  }
+  function openExportListeners() {
+    $('#expC1').oninput = syncExpPreview; $('#expC2').oninput = syncExpPreview; $('#expTitle').oninput = syncExpPreview;
+  }
+  function syncExpPreview() {
+    const c1 = $('#expC1').value, c2 = $('#expC2').value;
+    $('#expPreview').style.background = 'linear-gradient(135deg,' + c1 + ',' + c2 + ')';
+    $('#expPreviewTitle').textContent = $('#expTitle').value || 'Meu Dashboard';
+  }
+  function doExport() {
+    const theme = { title: $('#expTitle').value.trim() || 'Meu Dashboard', color1: $('#expC1').value, color2: $('#expC2').value };
+    state.theme = theme; save(); refreshAll();
+    const html = buildExportHtml(theme);
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (theme.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-|-$/g, '') || 'dashboard') + '.html';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    closeModal('exportModal');
+  }
+  function buildExportHtml(theme) {
+    const payload = { columns: state.columns, rows: state.rows, components: state.components, filters: state.filters, theme, meta: state.meta };
+    const data = JSON.stringify(payload).replace(/</g, '\\u003c');
+    const runtime = LITEBI_RUNTIME.toString();
+    return '<!DOCTYPE html>\n<html lang="pt-BR"><head><meta charset="UTF-8">' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+      '<title>' + esc(theme.title) + '</title>' +
+      '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>' +
+      '<style>' + EXPORT_CSS + '</style></head><body>' +
+      '<div id="dash-root"></div>' +
+      '<script>window.__LITEBI__=' + data + ';<\/script>' +
+      '<script>(' + runtime + ')();<\/script>' +
+      '</body></html>';
+  }
+
+  // CSS embutido no arquivo exportado (usa variáveis --c1/--c2)
+  const EXPORT_CSS = ':root{--c1:#5e9fe8;--c2:#72bc8f;--bg:#f6f7f9;--surface:#fff;--text:#1a1a1a;--soft:#6b7280;--border:rgba(0,0,0,.08)}' +
+    '*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif}' +
+    '.dash-header{padding:34px 28px;color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2))}' +
+    '.dash-header h1{margin:0;font-size:30px;font-weight:700;letter-spacing:-.02em}' +
+    '.dash-header p{margin:6px 0 0;opacity:.9;font-size:13px}' +
+    '.board{max-width:1280px;margin:24px auto;padding:0 20px 60px;display:grid;grid-template-columns:repeat(6,1fr);gap:14px;grid-auto-rows:148px}' +
+    '.cell{grid-column:var(--x)/span var(--w);grid-row:var(--y)/span var(--h);background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);display:flex;flex-direction:column;overflow:hidden}' +
+    '.cell-head{padding:10px 14px;font-size:13px;font-weight:600;border-bottom:1px solid var(--border)}' +
+    '.cell-body{flex:1;padding:14px;min-height:0;overflow:auto;display:flex;flex-direction:column}' +
+    '.cell-body canvas{flex:1;min-height:0}' +
+    '.kpi-v{font-size:clamp(26px,4vw,40px);font-weight:700;letter-spacing:-.02em;margin:auto 0 4px;color:var(--c1)}' +
+    '.kpi-v.txt{font-size:clamp(18px,3vw,30px);line-height:1.15;word-break:break-word}' +
+    '.kpi-s{font-size:12px;color:var(--soft)}' +
+    'table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap}th{color:var(--soft);font-weight:600}' +
+    '.foot{max-width:1280px;margin:0 auto;padding:0 20px 40px;color:var(--soft);font-size:12px}' +
+    '@media(max-width:760px){.board{grid-template-columns:1fr;grid-auto-rows:auto}.cell{grid-column:1/-1!important;grid-row:auto!important;min-height:200px}}';
+
+  // ---------- Runtime self-contained do dashboard exportado ----------
+  function LITEBI_RUNTIME() {
+    var D = window.__LITEBI__ || {};
+    var cols = D.columns || [], rows = D.rows || [], comps = D.components || [], filters = D.filters || [], theme = D.theme || {}, meta = D.meta || {};
+    var c1 = theme.color1 || '#5e9fe8', c2 = theme.color2 || '#72bc8f';
+    document.documentElement.style.setProperty('--c1', c1);
+    document.documentElement.style.setProperty('--c2', c2);
+
+    function pN(v) { if (v == null || v === '') return null; if (typeof v === 'number') return isFinite(v) ? v : null; var s = String(v).trim().replace(/[R$\u20ac\u00a3%\s]/g, ''); if (/,\d{1,2}$/.test(s) && s.indexOf('.') > -1) s = s.replace(/\./g, '').replace(',', '.'); else if (/,/.test(s) && !/\./.test(s)) s = s.replace(',', '.'); else s = s.replace(/,/g, ''); var n = parseFloat(s); return isFinite(n) ? n : null; }
+    function pD(v) { if (v == null || v === '') return null; var s = String(v).trim(); var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/); if (m) { var d = new Date(+(+m[3] < 100 ? 2000 + +m[3] : m[3]), +m[2] - 1, +m[1]); return isNaN(d) ? null : d; } var d2 = new Date(s); return isNaN(d2) ? null : d2; }
+    function colT(name) { for (var i = 0; i < cols.length; i++) if (cols[i].name === name) return cols[i].type; return 'texto'; }
+    function isNum(t) { return t === 'numero' || t === 'moeda' || t === 'percentual'; }
+    function aff(rs) { if (!filters.length) return rs; return rs.filter(function (row) { return filters.every(function (f) { var raw = row[f.column], t = colT(f.column); if (isNum(t)) { var n = pN(raw); if (n == null) return false; if (f.op === 'between') return n >= pN(f.value) && n <= pN(f.value2); if (f.op === 'gte') return n >= pN(f.value); if (f.op === 'lte') return n <= pN(f.value); if (f.op === 'eq') return n === pN(f.value); } else if (t === 'data') { var d = pD(raw); if (!d) return false; if (f.op === 'between') return d >= pD(f.value) && d <= pD(f.value2); if (f.op === 'gte') return d >= pD(f.value); if (f.op === 'lte') return d <= pD(f.value); } else { if (f.op === 'eq') return String(raw) === String(f.value); if (f.op === 'contains') return String(raw || '').toLowerCase().indexOf(String(f.value).toLowerCase()) > -1; } return true; }); }); }
+    function agg(rs, c, a) { var nums = rs.map(function (r) { return pN(r[c]); }).filter(function (n) { return n != null; }); if (a === 'soma') return nums.reduce(function (x, y) { return x + y; }, 0); if (a === 'media') return nums.length ? nums.reduce(function (x, y) { return x + y; }, 0) / nums.length : 0; if (a === 'max') return nums.length ? Math.max.apply(null, nums) : 0; if (a === 'min') return nums.length ? Math.min.apply(null, nums) : 0; if (a === 'contagem') return rs.filter(function (r) { return r[c] != null && r[c] !== ''; }).length; if (a === 'distinta') { var set = {}; rs.forEach(function (r) { var v = String(r[c]); if (v !== '' && v !== 'null') set[v] = 1; }); return Object.keys(set).length; } return 0; }
+    function kpi(cfg) { var rs = aff(rows); if (cfg.mode === 'diferenca') return agg(rs, cfg.column, 'soma') - agg(rs, cfg.column2, 'soma'); if (cfg.mode === 'reducao') { var a = agg(rs, cfg.column, 'soma'), b = agg(rs, cfg.column2, 'soma'); return a ? ((a - b) / a) * 100 : 0; } if (cfg.mode === 'crescimento') { var a2 = agg(rs, cfg.column, 'soma'), b2 = agg(rs, cfg.column2, 'soma'); return a2 ? ((b2 - a2) / a2) * 100 : 0; } return agg(rs, cfg.column, cfg.agg); }
+    function fmt(v, f) { if (v == null || isNaN(v)) return '\u2014'; if (f === 'moeda') return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); if (f === 'percentual') return v.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%'; if (f === 'tempo') return v.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' min'; return v.toLocaleString('pt-BR', { maximumFractionDigits: 2 }); }
+    function grp(cfg) { var rs = aff(rows), t = colT(cfg.x), b = {}; var order = []; rs.forEach(function (r) { var key = r[cfg.x]; if (t === 'data') { var d = pD(key); if (!d) return; if (cfg.dateGroup === 'ano') key = String(d.getFullYear()); else if (cfg.dateGroup === 'dia') key = d.toISOString().slice(0, 10); else key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); } key = (key == null || key === '') ? '(vazio)' : String(key); if (!b[key]) { b[key] = []; order.push(key); } b[key].push(r); }); var entries = order.map(function (k) { return [k, cfg.agg === 'contagem' ? b[k].length : agg(b[k], cfg.y, cfg.agg)]; }); if (t === 'data') entries.sort(function (a, z) { return a[0] < z[0] ? -1 : 1; }); else entries.sort(function (a, z) { return z[1] - a[1]; }); entries = entries.slice(0, cfg.type === 'pie' ? 8 : 30); return { labels: entries.map(function (e) { return e[0]; }), values: entries.map(function (e) { return e[1]; }) }; }
+    function lerp(a, z, tt) { var pa = a.replace('#', ''), pb = z.replace('#', ''); function p(s, i) { return parseInt(s.slice(i, i + 2), 16); } var r = Math.round(p(pa, 0) + (p(pb, 0) - p(pa, 0)) * tt), g = Math.round(p(pa, 2) + (p(pb, 2) - p(pa, 2)) * tt), bl = Math.round(p(pa, 4) + (p(pb, 4) - p(pa, 4)) * tt); return '#' + [r, g, bl].map(function (x) { return x.toString(16).padStart(2, '0'); }).join(''); }
+    function pal(n) { if (n <= 1) return [c1]; var o = []; for (var i = 0; i < n; i++) o.push(lerp(c1, c2, i / (n - 1))); return o; }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+    function kpiLabel(cfg) { var rs = aff(rows), groups = {}, order = []; for (var i = 0; i < rs.length; i++) { var key = rs[i][cfg.labelColumn]; if (key == null || key === '') continue; var k = String(key); if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(rs[i]); } if (!order.length) return '\u2014'; var best = null, bestVal = null; for (var j = 0; j < order.length; j++) { var kk = order[j], val = cfg.rankColumn ? agg(groups[kk], cfg.rankColumn, cfg.rankAgg || 'soma') : groups[kk].length; if (bestVal == null || (cfg.rankDir === 'menor' ? val < bestVal : val > bestVal)) { bestVal = val; best = kk; } } return best == null ? '\u2014' : best; }
+    function sub(cfg) { if (cfg.mode === 'rotulo') { var dir = cfg.rankDir === 'menor' ? 'Menor' : 'Maior'; var base = cfg.rankColumn ? (dir + ' ' + (cfg.rankAgg || 'soma') + ' de ' + cfg.rankColumn) : 'Mais frequente'; return base + ' \u00b7 por ' + cfg.labelColumn; } if (cfg.mode === 'diferenca') return cfg.column + ' \u2212 ' + cfg.column2; if (cfg.mode === 'reducao') return 'Redu\u00e7\u00e3o % (' + cfg.column + ' \u2192 ' + cfg.column2 + ')'; if (cfg.mode === 'crescimento') return 'Crescimento % (' + cfg.column + ' \u2192 ' + cfg.column2 + ')'; return (cfg.agg || '').toUpperCase() + ' de ' + cfg.column; }
+
+    var root = document.getElementById('dash-root');
+    var when = meta.uploadDate ? new Date(meta.uploadDate).toLocaleDateString('pt-BR') : '';
+    root.innerHTML = '<div class="dash-header"><h1>' + esc(theme.title) + '</h1><p>Gerado pelo LiteBI' + (meta.fileName ? ' \u00b7 fonte: ' + esc(meta.fileName) : '') + ' \u00b7 ' + new Date().toLocaleString('pt-BR') + '</p></div><div class="board" id="board"></div><div class="foot">' + (meta.rowCount || rows.length) + ' registros analisados.</div>';
+    var board = document.getElementById('board');
+
+    comps.forEach(function (comp) {
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.style.setProperty('--x', (comp.x || 0) + 1); cell.style.setProperty('--y', (comp.y || 0) + 1);
+      cell.style.setProperty('--w', comp.w || 2); cell.style.setProperty('--h', comp.h || 1);
+      var inner = '<div class="cell-head">' + esc(comp.title) + '</div><div class="cell-body"></div>';
+      cell.innerHTML = inner; board.appendChild(cell);
+      var body = cell.querySelector('.cell-body');
+      if (comp.type === 'kpi') {
+        var kdisp = comp.config.mode === 'rotulo' ? esc(kpiLabel(comp.config)) : esc(fmt(kpi(comp.config), comp.config.format));
+        var kcls = comp.config.mode === 'rotulo' ? ' txt' : '';
+        body.innerHTML = '<div class="kpi-v' + kcls + '">' + kdisp + '</div><div class="kpi-s">' + esc(sub(comp.config)) + '</div>';
+      } else if (comp.type === 'table') {
+        var cfg = comp.config, tcols = (cfg.columns && cfg.columns.length) ? cfg.columns : cols.slice(0, 4).map(function (c) { return c.name; });
+        var rs = aff(rows).slice();
+        if (cfg.sortBy) { var st = colT(cfg.sortBy); rs.sort(function (a, z) { return isNum(st) ? (pN(z[cfg.sortBy]) || 0) - (pN(a[cfg.sortBy]) || 0) : String(a[cfg.sortBy]).localeCompare(String(z[cfg.sortBy])); }); }
+        rs = rs.slice(0, cfg.limit || 10);
+        body.innerHTML = '<table><thead><tr>' + tcols.map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' + rs.map(function (r) { return '<tr>' + tcols.map(function (c) { return '<td>' + esc(r[c]) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+      } else if (comp.type === 'chart') {
+        var cv = document.createElement('canvas'); body.appendChild(cv);
+        var g = grp(comp.config), isLine = comp.config.type === 'line';
+        var colors = comp.config.type === 'pie' ? pal(g.labels.length) : c1;
+        new Chart(cv.getContext('2d'), {
+          type: comp.config.type === 'column' ? 'bar' : comp.config.type,
+          data: { labels: g.labels, datasets: [{ label: comp.config.y || 'Contagem', data: g.values, backgroundColor: colors, borderColor: c1, borderWidth: 2, fill: false, tension: 0.3, pointRadius: isLine ? 3 : 0 }] },
+          options: { indexAxis: comp.config.type === 'bar' ? 'y' : 'x', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: comp.config.type === 'pie' } }, scales: comp.config.type === 'pie' ? {} : { x: { ticks: { autoSkip: true, maxRotation: 0 } }, y: { beginAtZero: true } } }
+        });
+      }
+    });
+  }
+
+  // ============================================================
+  //  PERMISSÕES
+  // ============================================================
+  function applyRole() {
+    const viewer = state.role === 'viewer';
+    $('#dashboardActions').classList.toggle('viewer', viewer);
+    $('#screen-dashboard').classList.toggle('viewer', viewer);
+    selectId(null); layoutGrid(); renderTray();
+  }
+
+  // ============================================================
+  //  EVENTOS
+  // ============================================================
+  function bind() {
+    const drop = $('#dropzone'), input = $('#fileInput');
+    drop.onclick = () => input.click();
+    drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('drag'); };
+    drop.ondragleave = () => drop.classList.remove('drag');
+    drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove('drag'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); };
+    input.onchange = () => { if (input.files[0]) handleFile(input.files[0]); };
+    bindContextFields();
+
+    $('#btnConfirmData').onclick = goToDashboard;
+    $('#btnAutoBuild').onclick = () => { goToDashboard(); autoBuild(); };
+    $('#btnBackUpload').onclick = () => { $('#screen-preview').classList.add('hidden'); $('#screen-upload').classList.remove('hidden'); };
+
+    $('#btnAddKpi').onclick = () => openKpiModal(null);
+    $('#btnAddChart').onclick = () => openChartModal(null);
+    $('#btnAddTable').onclick = () => openTableModal(null);
+    $('#btnAddFilter').onclick = openFilterModal;
+    $('#btnAuto').onclick = autoBuild;
+    $('#clearFilters').onclick = () => { state.filters = []; renderFilterBar(); refreshAll(); save(); };
+    $('#btnExport').onclick = openExportModal;
+    $('#btnNewBase').onclick = () => { if (confirm('Substituir a base atual?')) { $('#screen-dashboard').classList.add('hidden'); $('#screen-upload').classList.remove('hidden'); } };
+    $('#roleSelect').onchange = (e) => { state.role = e.target.value; save(); applyRole(); };
+
+    $('#kpiSave').onclick = saveKpi; $('#chartSave').onclick = saveChart; $('#tableSave').onclick = saveTable; $('#filterSave').onclick = saveFilter; $('#exportConfirm').onclick = doExport;
+    $$('[data-close]').forEach((b) => b.onclick = () => closeModal(b.dataset.close));
+    $$('.modal-backdrop').forEach((m) => m.onclick = (e) => { if (e.target === m) m.classList.remove('open'); });
+
+    document.addEventListener('pointerdown', onPointerDown);
+    $('#grid').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-act]'); if (!btn) return;
+      const id = btn.dataset.id, comp = byId(id);
+      if (btn.dataset.act === 'del') { if (confirm('Excluir este componente?')) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } state.components = state.components.filter((c) => c.id !== id); if (selectedId === id) selectedId = null; save(); layoutGrid(); renderTray(); } }
+      else if (btn.dataset.act === 'edit') { comp.type === 'kpi' ? openKpiModal(comp) : comp.type === 'chart' ? openChartModal(comp) : openTableModal(comp); }
+      else if (btn.dataset.act === 'unplace') { comp.placed = false; if (selectedId === id) selectedId = null; save(); layoutGrid(); renderTray(); }
+      else if (btn.dataset.act === 'dup') { const copy = JSON.parse(JSON.stringify(comp)); copy.id = uid(); copy.title += ' (cópia)'; copy.placed = false; copy.x = 0; copy.y = 0; state.components.push(copy); save(); renderTray(); }
+    });
+    $('#filterChips').addEventListener('click', (e) => { const rm = e.target.closest('[data-rm]'); if (!rm) return; state.filters = state.filters.filter((f) => f.id !== rm.dataset.rm); renderFilterBar(); refreshAll(); save(); });
+  }
+
+  function init() {
+    bind();
+    if (load()) { $('#roleSelect').value = state.role; goToDashboard(); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+
+</script>
+</body>
+</html>

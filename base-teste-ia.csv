@@ -1,0 +1,21 @@
+data,regiao,canal,vendedor,produto,quantidade,receita,custo,desconto
+2026-01-05,Sudeste,Online,Ana,Notebook Pro,3,18900,12600,500
+2026-01-12,Sul,Loja,Bruno,Monitor 27,8,10400,6400,300
+2026-01-20,Nordeste,Online,Carla,Teclado Mecânico,15,5250,2700,150
+2026-02-03,Sudeste,Parceiros,Diego,Notebook Pro,5,31500,21000,800
+2026-02-11,Centro-Oeste,Loja,Elisa,Mouse Sem Fio,22,3300,1540,100
+2026-02-18,Sul,Online,Ana,Monitor 27,6,7800,4800,250
+2026-02-27,Nordeste,Loja,Bruno,Headset Pro,12,5760,3000,200
+2026-03-04,Sudeste,Online,Carla,Notebook Pro,4,25200,16800,600
+2026-03-13,Sul,Parceiros,Diego,Teclado Mecânico,18,6300,3240,180
+2026-03-21,Centro-Oeste,Loja,Elisa,Monitor 27,7,9100,5600,280
+2026-04-02,Nordeste,Online,Ana,Mouse Sem Fio,30,4500,2100,120
+2026-04-10,Sudeste,Parceiros,Bruno,Headset Pro,16,7680,4000,250
+2026-04-19,Sul,Loja,Carla,Notebook Pro,2,12600,8400,350
+2026-05-06,Centro-Oeste,Online,Diego,Monitor 27,9,11700,7200,360
+2026-05-15,Nordeste,Parceiros,Elisa,Teclado Mecânico,20,7000,3600,220
+2026-05-24,Sudeste,Loja,Ana,Headset Pro,14,6720,3500,180
+2026-06-03,Sul,Online,Bruno,Mouse Sem Fio,26,3900,1820,100
+2026-06-11,Centro-Oeste,Parceiros,Carla,Notebook Pro,6,37800,25200,900
+2026-06-20,Nordeste,Loja,Diego,Monitor 27,5,6500,4000,180
+2026-06-28,Sudeste,Online,Elisa,Teclado Mecânico,24,8400,4320,260

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar — LiteBI</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;font-family:ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif;background:linear-gradient(135deg,#5e9fe8,#72bc8f);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:92px 20px 20px;color:#1a1a1a}.site-nav{position:fixed;inset:0 0 auto;height:72px;padding:0 max(22px,calc((100% - 1180px)/2));display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(16,24,40,.07);z-index:2}.site-brand{font-size:21px;font-weight:850;letter-spacing:-.05em;color:#182230;text-decoration:none}.site-brand span{color:#5e9fe8}.site-links{display:flex;gap:9px}.site-links a{border-radius:10px;padding:10px 14px;text-decoration:none;font-size:13px;font-weight:750}.site-ghost{color:#182230;background:#fff;border:1px solid #e7ebf0}.site-primary{color:#fff;background:linear-gradient(135deg,#5e9fe8,#72bc8f)}
+  .card{background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.25);width:100%;max-width:400px;padding:34px 30px}
+  .brand{font-size:26px;font-weight:800;letter-spacing:-.02em;text-align:center;margin-bottom:4px}
+  .sub{text-align:center;color:#6b7280;font-size:14px;margin-bottom:24px}
+  label{display:block;font-size:12px;font-weight:600;color:#444;margin:0 0 6px}
+  input{width:100%;padding:11px 13px;border:1px solid rgba(0,0,0,.15);border-radius:10px;font-size:14px;margin-bottom:14px}
+  input:focus{outline:none;border-color:#5e9fe8}
+  .btn{width:100%;border:0;border-radius:10px;padding:12px;font-size:15px;font-weight:700;cursor:pointer}
+  .primary{background:#5e9fe8;color:#fff}.primary:hover{background:#4a8ed8}
+  .google{background:#fff;color:#3c4043;border:1px solid rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;gap:10px;margin-top:10px;text-decoration:none}
+  .google:hover{background:#f6f5f4}
+  .sep{display:flex;align-items:center;gap:10px;color:#9ca3af;font-size:12px;margin:18px 0}
+  .sep::before,.sep::after{content:'';flex:1;height:1px;background:rgba(0,0,0,.1)}
+  .foot{text-align:center;font-size:13px;color:#6b7280;margin-top:18px}
+  .foot a{color:#5e9fe8;text-decoration:none;font-weight:600}
+  .msg{font-size:13px;color:#dc2626;min-height:16px;margin-bottom:6px}
+</style>
+</head>
+<body>
+  <header class="site-nav"><a class="site-brand" href="/">Lite<span>BI</span></a><nav class="site-links"><a class="site-ghost" href="/">Página inicial</a><a class="site-primary" href="/signup?next=%2Fhome">Criar conta</a></nav></header>
+  <form class="card" id="form">
+    <div class="brand">LiteBI</div>
+    <div class="sub">Entre para publicar e hospedar seus dashboards</div>
+    <div class="msg" id="msg"></div>
+    <label for="email">E-mail</label>
+    <input type="email" id="email" autocomplete="email" required>
+    <label for="password">Senha</label>
+    <input type="password" id="password" autocomplete="current-password" required>
+    <button class="btn primary" type="submit">Entrar</button>
+    <a class="btn google" id="google" href="#" style="display:none">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.8 6.1C12.2 13.2 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.3-4 6.7-9.9 6.7-17.4z"/><path fill="#FBBC05" d="M10.3 28.4c-.5-1.5-.8-3.1-.8-4.9s.3-3.4.8-4.9l-7.8-6.1C.9 16 0 19.9 0 24s.9 8 2.5 11.5l7.8-7.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.3-5.7c-2 1.4-4.7 2.3-7.9 2.3-6.4 0-11.8-3.7-13.7-9.9l-7.8 7.1C6.4 42.6 14.6 48 24 48z"/></svg>
+      Entrar com Google
+    </a>
+    <div class="foot">Não tem conta? <a href="/signup">Criar conta</a><br><a href="/termos">Termos</a> · <a href="/privacidade">Privacidade</a></div>
+  </form>
+<script>
+  var qs = new URLSearchParams(location.search);
+  function safeNext(value) { return value && value.charAt(0) === '/' && value.charAt(1) !== '/' && value.indexOf('\\') === -1 ? value : '/home'; }
+  var next = safeNext(qs.get('next'));
+  if (qs.get('error') === 'google') document.getElementById('msg').textContent = 'Falha no login com Google. Tente novamente.';
+  fetch('/api/me', { credentials: 'same-origin' }).then(function(r){return r.json();}).then(function(d){
+    if (d.user) { location.href = next; return; }
+    if (d.googleEnabled) {
+      var g = document.getElementById('google');
+      g.style.display = 'flex';
+      g.href = '/auth/google?next=' + encodeURIComponent(next);
+    }
+  });
+  document.getElementById('form').onsubmit = function(e){
+    e.preventDefault();
+    var msg = document.getElementById('msg'); msg.textContent = '';
+    fetch('/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+      body: JSON.stringify({ email: email.value, password: password.value })
+    }).then(function(r){return r.json().then(function(j){return {ok:r.ok,data:j};});})
+    .then(function(r){ if(!r.ok){ msg.textContent = (r.data&&r.data.error)||'Falha no login.'; return;} location.href = next; })
+    .catch(function(){ msg.textContent='Erro de rede.'; });
+  };
+</script>
+</body>
+</html>
