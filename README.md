@@ -92,9 +92,9 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 | PATCH | `/api/dashboards/:id` | Atualiza título/visibilidade. |
 | DELETE | `/api/dashboards/:id` | Exclui um dashboard. |
 
-### IA Gemini
+### IA OpenAI
 
-O botão de montagem automática usa o endpoint `/api/ai/dashboard`. Configure `GEMINI_API_KEY` no ambiente do servidor (e, opcionalmente, `GEMINI_MODEL`). A chave nunca é enviada ao navegador. O cliente envia somente o esquema da planilha, estatísticas básicas e até quatro linhas curtas de amostra; se a IA falhar, a montagem local é usada automaticamente.
+O botão de montagem automática usa o endpoint `/api/ai/dashboard`. Configure `OPENAI_API_KEY` e, opcionalmente, `OPENAI_MODEL` (padrão `gpt-5.4-nano`). A chave nunca é enviada ao navegador. O cliente envia somente o esquema da planilha, o foco informado e até três linhas curtas de amostra; a montagem só é concluída quando a IA retorna os componentes válidos.
 
 ### Colaboração
 

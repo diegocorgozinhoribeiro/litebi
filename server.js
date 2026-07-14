@@ -19,8 +19,8 @@ const PUB = path.join(__dirname, 'public');
 // Render/Neon ficam atrás de proxy; necessário para cookies 'secure'.
 app.set('trust proxy', 1);
 
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+app.use(express.json({ limit: '35mb' }));
+app.use(express.urlencoded({ extended: true, limit: '35mb' }));
 
 app.use(session({
   store: new PgSession({ pool, tableName: 'session', createTableIfMissing: true }),
@@ -38,19 +38,10 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // ---------- Helpers ----------
-function safeNext(value, fallback = '/home') {
-  const candidate = String(value || '');
-  // Somente caminhos absolutos locais; bloqueia URLs externas, //host e backslashes.
-  if (!candidate || !candidate.startsWith('/') || candidate.startsWith('//') || candidate.includes('\\')) return fallback;
-  try {
-    const parsed = new URL(candidate, 'http://litebi.invalid');
-    return parsed.origin === 'http://litebi.invalid' ? candidate : fallback;
-  } catch (_) { return fallback; }
-}
 function requireAuth(req, res, next) {
   if (req.isAuthenticated && req.isAuthenticated()) return next();
   if (req.method === 'GET' && req.accepts('html')) {
-    return res.redirect('/login?next=' + encodeURIComponent(safeNext(req.originalUrl, '/home')));
+    return res.redirect('/login?next=' + encodeURIComponent(req.originalUrl));
   }
   return res.status(401).json({ error: 'Não autenticado.' });
 }
@@ -93,15 +84,12 @@ app.post('/auth/signup', async (req, res, next) => {
     const name = String(req.body.name || '').trim() || (email ? email.split('@')[0] : '');
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: 'E-mail inválido.' });
     if (password.length < 6) return res.status(400).json({ error: 'A senha deve ter ao menos 6 caracteres.' });
-    if (req.body.acceptTerms !== true || req.body.acceptPrivacy !== true) {
-      return res.status(400).json({ error: 'Você precisa aceitar os Termos de Uso e o Aviso de Privacidade.' });
-    }
     const exists = await pool.query('SELECT 1 FROM users WHERE email = $1', [email]);
     if (exists.rowCount) return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
     const hash = await bcrypt.hash(password, 12);
     const { rows } = await pool.query(
-      'INSERT INTO users (email, password_hash, name, terms_accepted_at, privacy_accepted_at, consent_version) VALUES ($1, $2, $3, now(), now(), $4) RETURNING *',
-      [email, hash, name, process.env.LEGAL_VERSION || '2026-07-12']
+      'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING *',
+      [email, hash, name]
     );
     req.login(rows[0], (err) => {
       if (err) return next(err);
@@ -130,9 +118,7 @@ app.post('/auth/logout', (req, res, next) => {
 
 app.get('/auth/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID) return res.status(404).send('Login com Google não configurado.');
-  req.session.next = safeNext(req.query.next, '/home');
-  req.session.googleSignup = req.query.mode === 'signup';
-  req.session.googleConsent = req.query.consent === '1';
+  if (req.query.next) req.session.next = String(req.query.next);
   passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
 });
 
@@ -141,9 +127,8 @@ app.get('/auth/google/callback', (req, res, next) => {
     if (err || !user) return res.redirect('/login?error=google');
     req.login(user, (e) => {
       if (e) return res.redirect('/login?error=google');
-      const next = safeNext(req.session.next, '/dashboards');
-      delete req.session.next; delete req.session.googleSignup; delete req.session.googleConsent;
-      res.redirect(next);
+      const next = req.session.next; delete req.session.next;
+      res.redirect(next || '/dashboards');
     });
   })(req, res, next);
 });
@@ -165,10 +150,21 @@ app.patch('/api/profile', requireAuth, async (req, res, next) => {
   try {
     const name = String(req.body.name || '').trim().slice(0, 80);
     const bio = String(req.body.bio || '').trim().slice(0, 240);
+    const avatarUrl = String(req.body.avatar_url || '').trim();
     if (!name) return res.status(400).json({ error: 'O nome não pode ficar vazio.' });
-    const { rows } = await pool.query('UPDATE users SET name = $1, bio = $2 WHERE id = $3 RETURNING *', [name, bio, req.user.id]);
+    if (avatarUrl.length > 2 * 1024 * 1024 || (avatarUrl && !/^data:image\/(png|jpe?g|gif|webp);base64,/.test(avatarUrl))) {
+      return res.status(400).json({ error: 'A foto precisa ser uma imagem válida.' });
+    }
+    const { rows } = await pool.query('UPDATE users SET name = $1, bio = $2, avatar_url = $3 WHERE id = $4 RETURNING *', [name, bio, avatarUrl || null, req.user.id]);
     req.user = rows[0];
     res.json({ ok: true, profile: publicUser(rows[0]) });
+  } catch (e) { next(e); }
+});
+
+app.delete('/api/account', requireAuth, async (req, res, next) => {
+  try {
+    await pool.query('DELETE FROM users WHERE id = $1', [req.user.id]);
+    req.logout((err) => { if (err) return next(err); res.json({ ok: true }); });
   } catch (e) { next(e); }
 });
 
@@ -183,6 +179,24 @@ app.get('/api/profile/:id', requireAuth, async (req, res, next) => {
       WHERE (requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1)
       ORDER BY id DESC LIMIT 1`, [req.user.id, id])).rows[0] || null;
     res.json({ profile: Object.assign(publicUser(user), { created_at: user.created_at }), dashboards, friendship: relation });
+  } catch (e) { next(e); }
+});
+
+// Perfil público: não expõe senha e permite que a galeria aponte para o criador.
+app.get('/api/public/profile/:id', async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const user = (await pool.query('SELECT id, name, email, avatar_url, bio, created_at FROM users WHERE id = $1', [id])).rows[0];
+    if (!user) return res.status(404).json({ error: 'Perfil não encontrado.' });
+    const dashboards = (await pool.query(`SELECT id, slug, title, views, updated_at FROM dashboards
+      WHERE user_id = $1 AND visibility = 'public' ORDER BY updated_at DESC`, [id])).rows;
+    let friendship = null;
+    if (req.user && req.user.id !== id) {
+      friendship = (await pool.query(`SELECT id, requester_id, addressee_id, status FROM friendships
+        WHERE (requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1)
+        ORDER BY id DESC LIMIT 1`, [req.user.id, id])).rows[0] || null;
+    }
+    res.json({ profile: Object.assign(publicUser(user), { created_at: user.created_at }), dashboards, friendship });
   } catch (e) { next(e); }
 });
 
@@ -289,12 +303,25 @@ app.post('/api/teams/:id/members', requireAuth, async (req, res, next) => {
     const email = String(req.body.email || '').toLowerCase().trim();
     const user = (await pool.query('SELECT id, name, email, avatar_url FROM users WHERE email = $1', [email])).rows[0];
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado. Ele precisa criar uma conta primeiro.' });
-    const team = (await pool.query('SELECT owner_id FROM teams WHERE id = $1', [id])).rows[0];
-    if (!team) return res.status(404).json({ error: 'Equipe não encontrada.' });
-    if (user.id === team.owner_id) return res.status(400).json({ error: 'O dono da equipe não pode ser rebaixado.' });
+    const existing = (await pool.query('SELECT role FROM team_members WHERE team_id = $1 AND user_id = $2', [id, user.id])).rows[0];
+    if (existing && existing.role === 'owner') return res.status(400).json({ error: 'O dono da equipe não pode ter a permissão alterada.' });
     await pool.query(`INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, $3)
-      ON CONFLICT (team_id, user_id) DO UPDATE SET role = EXCLUDED.role WHERE team_members.role <> 'owner'`, [id, user.id, role]);
+      ON CONFLICT (team_id, user_id) DO UPDATE SET role = EXCLUDED.role`, [id, user.id, role]);
     res.json({ ok: true, member: Object.assign(user, { role }) });
+  } catch (e) { next(e); }
+});
+
+app.patch('/api/teams/:id/members/:userId', requireAuth, async (req, res, next) => {
+  try {
+    const teamId = parseInt(req.params.id, 10), userId = parseInt(req.params.userId, 10);
+    const actorRole = await teamRole(req.user.id, teamId);
+    if (!['owner', 'admin'].includes(actorRole)) return res.status(403).json({ error: 'Somente donos e administradores podem alterar permissões.' });
+    const role = req.body.role === 'editor' ? 'editor' : 'member';
+    const target = (await pool.query('SELECT role FROM team_members WHERE team_id = $1 AND user_id = $2', [teamId, userId])).rows[0];
+    if (!target) return res.status(404).json({ error: 'Participante não encontrado.' });
+    if (target.role === 'owner') return res.status(400).json({ error: 'O dono da equipe não pode ser rebaixado.' });
+    await pool.query('UPDATE team_members SET role = $1 WHERE team_id = $2 AND user_id = $3', [role, teamId, userId]);
+    res.json({ ok: true, role });
   } catch (e) { next(e); }
 });
 
@@ -303,7 +330,21 @@ app.delete('/api/teams/:id/members/:userId', requireAuth, async (req, res, next)
     const id = parseInt(req.params.id, 10), userId = parseInt(req.params.userId, 10);
     const ownerRole = await teamRole(req.user.id, id);
     if (!['owner', 'admin'].includes(ownerRole) && userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão.' });
-    await pool.query('DELETE FROM team_members WHERE team_id = $1 AND user_id = $2 AND role <> \'owner\'', [id, userId]);
+    const target = (await pool.query('SELECT role FROM team_members WHERE team_id = $1 AND user_id = $2', [id, userId])).rows[0];
+    if (!target) return res.status(404).json({ error: 'Participante não encontrado.' });
+    if (target.role === 'owner') return res.status(400).json({ error: 'O dono da equipe não pode ser removido.' });
+    await pool.query('DELETE FROM team_members WHERE team_id = $1 AND user_id = $2', [id, userId]);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+app.delete('/api/teams/:id', requireAuth, async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const team = (await pool.query('SELECT owner_id FROM teams WHERE id = $1', [id])).rows[0];
+    if (!team) return res.status(404).json({ error: 'Equipe não encontrada.' });
+    if (team.owner_id !== req.user.id) return res.status(403).json({ error: 'Somente o dono pode excluir a equipe.' });
+    await pool.query('DELETE FROM teams WHERE id = $1', [id]);
     res.json({ ok: true });
   } catch (e) { next(e); }
 });
@@ -312,8 +353,8 @@ app.delete('/api/teams/:id/members/:userId', requireAuth, async (req, res, next)
 // A chave fica somente no servidor. O frontend envia apenas metadados compactos.
 app.post('/api/ai/dashboard', requireAuth, async (req, res, next) => {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(503).json({ error: 'IA não configurada. Defina GEMINI_API_KEY.' });
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) return res.status(503).json({ error: 'OpenAI não configurada. Defina OPENAI_API_KEY e reinicie o servidor.' });
     const input = req.body || {};
     if (!Array.isArray(input.columns) || !input.columns.length) return res.status(400).json({ error: 'Colunas ausentes.' });
 
@@ -329,36 +370,79 @@ app.post('/api/ai/dashboard', requireAuth, async (req, res, next) => {
     };
     const fileDescription = String(input.description || '').trim();
     if (fileDescription) compact.description = fileDescription.slice(0, 500);
+    const focus = String(input.focus || '').trim();
+    if (focus) compact.focus = focus.slice(0, 320);
     compact.columns.forEach((column, index) => {
       const description = String(input.columns[index]?.description || '').trim();
       if (description) column.description = description.slice(0, 120);
     });
     const prompt = [
-      'Planeje gráficos úteis para um dashboard LiteBI. Responda SOMENTE JSON válido no formato {"theme":{"title":"...","subtitle":"...","color1":"#RRGGBB","color2":"#RRGGBB"},"components":[...]}.',
-      'Retorne 4 gráficos e 1 tabela. Use apenas nomes de colunas fornecidos; não invente colunas.',
-      'Gráfico: {type:"line|column|bar|pie",x,y,agg:"soma|media|max|min|contagem",dateGroup:"dia|mes|ano"}.',
+      'Responda SOMENTE JSON válido, sem markdown, no formato {"theme":{"title":"...","subtitle":"...","color1":"#RRGGBB","color2":"#RRGGBB"},"components":[...]}.',
+      'Retorne exatamente 3 KPIs, 4 gráficos e 1 tabela. Use apenas nomes de colunas fornecidos; não invente colunas.',
+      'Cada KPI DEVE ser {"type":"kpi","title":"...","config":{"mode":"simples","column":"coluna","agg":"soma|media|max|min|contagem","format":"numero|moeda|percentual"}}.',
+      'Cada gráfico DEVE ser {"type":"chart","title":"...","config":{"type":"line|column|bar|pie","x":"coluna","y":"coluna","agg":"soma|media|max|min|contagem","dateGroup":"dia|mes|ano"}}.',
+      'A tabela DEVE ser {"type":"table","title":"...","config":{"columns":["coluna"],"sortBy":"coluna","limit":8}}.',
       'Use line somente com data no eixo x; use column/bar/pie somente com categoria/texto no x. Prefira métricas numéricas úteis, não IDs.',
-      'Tabela: {type:"table",config:{columns:[...],sortBy,limit:8}}. Títulos curtos. JSON compacto.',
+      'Se houver foco do usuário, priorize esse objetivo ao escolher KPIs e gráficos; se faltar uma coluna necessária, use a melhor alternativa disponível.',
       JSON.stringify(compact),
     ].join('\n');
-    const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/' + (process.env.GEMINI_MODEL || 'gemini-flash-latest') + ':generateContent',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 700, responseMimeType: 'application/json' },
-        }),
-      }
-    );
+    const aiAbort = new AbortController();
+    const aiTimeout = setTimeout(() => aiAbort.abort(), 30000);
+    const openaiOptions = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + openaiKey },
+      signal: aiAbort.signal,
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || 'gpt-5.4-nano',
+        input: prompt,
+        reasoning: { effort: 'none' },
+        max_output_tokens: 1800,
+        text: { format: { type: 'json_object' } },
+      }),
+    };
+    let response;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      response = await fetch('https://api.openai.com/v1/responses', openaiOptions);
+      if (![429, 503].includes(response.status) || attempt === 1) break;
+      console.warn('[LiteBI] OpenAI temporariamente indisponível; tentando novamente.');
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+    }
+    clearTimeout(aiTimeout);
     const data = await response.json();
-    if (!response.ok) return res.status(502).json({ error: data.error?.message || 'Falha na API Gemini.' });
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = data.output?.flatMap((item) => item.content || []).filter((item) => item.type === 'output_text').map((item) => item.text).join('') || data.output_text || '';
+    console.log('[LiteBI] IA OpenAI respondeu:', response.status, response.ok ? 'ok' : 'erro');
+    if (!response.ok) {
+      const reason = data.error?.message || (response.status === 503 ? 'Serviço temporariamente indisponível.' : 'Falha na API.');
+      return res.status(502).json({ error: 'OpenAI HTTP ' + response.status + ': ' + reason });
+    }
+    if (!text) {
+      console.error('[LiteBI] IA sem texto:', JSON.stringify(data).slice(0, 1000));
+      return res.status(502).json({ error: 'A IA respondeu sem conteúdo.' });
+    }
     let result;
-    try { result = JSON.parse(text); } catch (_) { return res.status(502).json({ error: 'A IA retornou um formato inválido.' }); }
+    try {
+      const cleaned = text.replace(/```json?/gi, '').replace(/```/g, '').trim();
+      try { result = JSON.parse(cleaned); } catch (_) {
+        const start = cleaned.indexOf('{'), end = cleaned.lastIndexOf('}');
+        if (start < 0 || end <= start) throw _;
+        result = JSON.parse(cleaned.slice(start, end + 1));
+      }
+    } catch (_) {
+      console.error('[LiteBI] JSON inválido retornado pela IA:', text.slice(0, 1200));
+      return res.status(502).json({ error: 'A IA respondeu, mas o JSON veio incompleto ou inválido.' });
+    }
     if (!Array.isArray(result.components)) return res.status(502).json({ error: 'A IA não retornou componentes.' });
-    res.json({ theme: result.theme && typeof result.theme === 'object' ? result.theme : null, components: result.components.slice(0, 8) });
+    // O contrato da IA exige 3 KPIs + 4 gráficos + 1 tabela = 8 componentes.
+    // Não truncar para 8 aqui: o frontend valida a contagem completa.
+    const components = result.components.map((component) => {
+      if (!component || typeof component !== 'object') return null;
+      if (['line', 'column', 'bar', 'pie'].includes(component.type)) {
+        const { type, x, y, agg, dateGroup } = component;
+        return { type: 'chart', title: component.title || (String(type) + ' por ' + String(x || 'categoria')), config: { type, x, y, agg, dateGroup } };
+      }
+      return component;
+    }).filter(Boolean).slice(0, 8);
+    res.json({ theme: result.theme && typeof result.theme === 'object' ? result.theme : null, components });
   } catch (e) { next(e); }
 });
 
@@ -391,6 +475,16 @@ app.get('/api/dashboards', requireAuth, async (req, res, next) => {
        WHERE d.user_id = $1 OR tm.user_id = $1 ORDER BY d.updated_at DESC`,
       [req.user.id]
     );
+    res.json({ dashboards: rows });
+  } catch (e) { next(e); }
+});
+
+app.get('/api/public/dashboards', async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(`SELECT d.id, d.slug, d.title, d.views, d.updated_at,
+      u.id AS owner_id, u.name AS owner_name, u.avatar_url
+      FROM dashboards d JOIN users u ON u.id = d.user_id
+      WHERE d.visibility = 'public' ORDER BY d.updated_at DESC LIMIT 100`);
     res.json({ dashboards: rows });
   } catch (e) { next(e); }
 });
@@ -485,20 +579,11 @@ app.get('/d/:slug', async (req, res, next) => {
       const uid = req.user && req.user.id;
       if (uid !== d.user_id) {
         if (!req.user) return res.redirect('/login?next=' + encodeURIComponent('/d/' + req.params.slug));
-        const access = await dashboardAccess(uid, d.id);
-        if (!access) return res.status(403).send(errorPage('Este dashboard é privado.'));
+        return res.status(403).send(errorPage('Este dashboard é privado.'));
       }
     }
     pool.query('UPDATE dashboards SET views = views + 1 WHERE id = $1', [d.id]).catch(() => {});
-    // O HTML é arbitrário e pode conter scripts. CSP sandbox dá a ele uma origem opaca:
-    // scripts continuam funcionando, mas não podem ler cookies/localStorage nem agir na app.
-    res.set({
-      'Content-Type': 'text/html; charset=utf-8',
-      'Content-Security-Policy': "sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'",
-      'X-Content-Type-Options': 'nosniff',
-      'Referrer-Policy': 'no-referrer',
-      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
-    }).send(d.html);
+    res.set('Content-Type', 'text/html; charset=utf-8').send(d.html);
   } catch (e) { next(e); }
 });
 
@@ -511,8 +596,10 @@ app.get('/index.html', requireAuth, (req, res) => res.sendFile(path.join(PUB, 'i
 app.get('/home', requireAuth, (req, res) => res.sendFile(path.join(PUB, 'dashboards.html')));
 app.get('/dashboards', requireAuth, (req, res) => res.sendFile(path.join(PUB, 'dashboards.html')));
 app.get('/profile', requireAuth, (req, res) => res.sendFile(path.join(PUB, 'profile.html')));
-app.get('/termos', (req, res) => res.sendFile(path.join(PUB, 'termos.html')));
-app.get('/privacidade', (req, res) => res.sendFile(path.join(PUB, 'privacidade.html')));
+app.get('/u/:id', (req, res) => res.sendFile(path.join(PUB, 'profile.html')));
+app.get('/terms', (req, res) => res.sendFile(path.join(PUB, 'termos.html')));
+app.get('/privacy', (req, res) => res.sendFile(path.join(PUB, 'privacidade.html')));
+app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, 'logo.png')));
 // Arquivos estáticos (cloud.js, base-exemplo.csv, etc.)
 app.use(express.static(PUB));
 

@@ -53,9 +53,6 @@ async function init() {
 
   await pool.query(`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ;
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_accepted_at TIMESTAMPTZ;
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_version TEXT;
     CREATE TABLE IF NOT EXISTS friendships (
       id           SERIAL PRIMARY KEY,
       requester_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -20,7 +20,8 @@
 
   // ---------- estilos ----------
   var css = ''
-    + '#lb-bar{position:fixed;inset:0 0 auto;z-index:99999;height:72px;padding:0 max(22px,calc((100% - 1180px)/2));display:flex;gap:9px;align-items:center;background:rgba(255,255,255,.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(16,24,40,.07);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}'
+    + '#lb-bar{position:fixed;inset:0 0 auto;z-index:99999;height:72px;padding:0 max(22px,calc((100% - 1180px)/2));display:flex;gap:9px;align-items:center;background:rgba(255,255,255,.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(16,24,40,.07);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.lb-account{position:relative}.lb-account-menu{display:none;position:absolute;right:0;top:48px;width:190px;padding:8px;background:#fff;border:1px solid #e7ebf0;border-radius:13px;box-shadow:0 16px 40px rgba(0,0,0,.18);z-index:5}.lb-account-menu.open{display:grid;gap:4px}.lb-account-menu a,.lb-account-menu button{border:0;background:transparent;text-align:left;color:#182230;padding:10px;border-radius:8px;text-decoration:none;font:inherit;font-size:13px;cursor:pointer}.lb-account-menu a:hover,.lb-account-menu button:hover{background:#f7f9fc}'
+    + 'body.lb-dark #lb-bar{background:rgba(18,25,34,.92);border-bottom-color:#2b3745;color:#e9eef5}body.lb-dark .lb-btn.lb-ghost{background:#202c39;color:#e9eef5;border-color:#2b3745}body.lb-dark .lb-account-menu{background:#1b2632;border-color:#2b3745}body.lb-dark .lb-account-menu a,body.lb-dark .lb-account-menu button{color:#e9eef5}body.lb-dark .lb-account-menu a:hover,body.lb-dark .lb-account-menu button:hover{background:#243241}body.lb-dark #lb-tools{background:rgba(27,38,50,.94);border-color:#2b3745}body.lb-dark .lb-chip{background:#202c39;color:#e9eef5;border-color:#2b3745}'
     + '.lb-brand{margin-right:auto;font-size:21px;font-weight:850;letter-spacing:-.05em;color:#182230;text-decoration:none}.lb-brand span{color:#5e9fe8}'
     + '.dash-toolbar{display:none!important}'
     + '#lb-tools{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99998;display:none;gap:8px;align-items:center;padding:9px;background:rgba(255,255,255,.92);backdrop-filter:blur(16px);border:1px solid #e7ebf0;border-radius:15px;box-shadow:0 14px 34px rgba(16,24,40,.16);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}'
@@ -52,12 +53,13 @@
   document.body.appendChild(toolTray);
 
   function syncBarVisibility() {
+    var embedded = new URLSearchParams(location.search).get('embedded') === '1';
     var builder = document.getElementById('screen-upload') || document.getElementById('screen-dashboard');
     var dashboard = document.getElementById('screen-dashboard');
     var isDashboard = dashboard && !dashboard.classList.contains('hidden');
-    bar.style.display = builder ? 'flex' : 'none';
-    toolTray.style.display = isDashboard ? 'flex' : 'none';
-    document.body.style.paddingTop = builder ? '72px' : '0';
+    bar.style.display = builder && !embedded ? 'flex' : 'none';
+    toolTray.style.display = isDashboard && !embedded ? 'flex' : 'none';
+    document.body.style.paddingTop = builder && !embedded ? '72px' : '0';
   }
   syncBarVisibility();
   var screenObserver = new MutationObserver(syncBarVisibility);
@@ -84,18 +86,21 @@
       }
       var brand = el('a', { class: 'lb-brand', href: '/home' }, 'Lite<span>BI</span>');
       var home = el('a', { class: 'lb-btn lb-ghost', href: '/home' }, 'Início');
-      var profile = el('a', { class: 'lb-btn lb-ghost', href: '/profile' }, 'Perfil');
-      var fresh = el('a', { class: 'lb-btn lb-primary', href: '/builder?new=1' }, 'Novo dashboard');
+      var fresh = el('a', { class: 'lb-btn lb-primary', href: '/builder?new=1' }, '+ Novo dashboard');
+      var account = el('div', { class: 'lb-account' });
+      var accountToggle = el('button', { class: 'lb-btn lb-ghost' }, (me.name || 'Conta') + ' ⌄');
+      var accountMenu = el('div', { class: 'lb-account-menu' });
+      accountMenu.innerHTML = '<a href="/profile">Meu perfil</a><a href="/home#gallery">Dashboards publicados</a><button id="lb-theme">🌙 Modo escuro</button><button id="lb-logout">Sair</button>';
+      account.appendChild(accountToggle); account.appendChild(accountMenu);
+      accountToggle.onclick = function () { accountMenu.classList.toggle('open'); };
+      accountMenu.querySelector('#lb-theme').onclick = function () { document.body.classList.toggle('lb-dark'); var d = document.body.classList.contains('lb-dark'); localStorage.setItem('litebi-theme', d ? 'dark' : 'light'); this.textContent = d ? '☀️ Modo claro' : '🌙 Modo escuro'; };
+      if (localStorage.getItem('litebi-theme') === 'dark') document.body.classList.add('lb-dark');
       var pub = el('button', { class: 'lb-btn lb-primary', id: 'lb-publish' }, '✨ Publicar');
       pub.onclick = openPublish;
       var tools = [action('btnAddKpi', '+ KPI'), action('btnAddChart', '+ Gráfico'), action('btnAddTable', '+ Tabela'), action('btnAuto', '✨ IA'), action('btnExport', 'Exportar')];
-      var chip = el('div', { class: 'lb-chip' });
-      if (me.avatar_url) chip.appendChild(el('img', { src: me.avatar_url, alt: '' }));
-      else chip.appendChild(el('div', { class: 'lb-av' }, initials(me.name, me.email)));
-      chip.appendChild(el('span', null, (me.name || me.email)));
-      var out = el('button', { class: 'lb-btn lb-ghost', title: 'Sair' }, 'Sair');
+      var out = accountMenu.querySelector('#lb-logout');
       out.onclick = function () { api('POST', '/auth/logout').then(function () { location.reload(); }); };
-      bar.appendChild(brand); bar.appendChild(home); bar.appendChild(profile); bar.appendChild(fresh); bar.appendChild(chip); bar.appendChild(out);
+      bar.appendChild(brand); bar.appendChild(home); bar.appendChild(fresh); bar.appendChild(account);
       tools.forEach(function (item) { toolTray.appendChild(item); }); toolTray.appendChild(pub);
     } else {
       bar.appendChild(el('a', { class: 'lb-btn lb-ghost', href: '/login' }, 'Entrar'));
@@ -117,15 +122,13 @@
     + '</div></div>'
     + '<div class="lb-msg" id="lb-msg"></div>'
     + '<div id="lb-result" style="display:none"><div class="lb-link"><input type="text" id="lb-url" readonly><button class="lb-btn lb-ghost" id="lb-copy">Copiar</button></div></div>'
-    + '<div class="lb-actions"><button class="lb-btn lb-ghost" id="lb-cancel">Fechar</button><button class="lb-btn lb-primary" id="lb-save">Publicar</button></div>'
+    + '<div class="lb-actions"><button class="lb-btn lb-primary" id="lb-save">Publicar</button></div>'
     + '</div>';
   document.body.appendChild(modal);
 
   var msg = modal.querySelector('#lb-msg');
   function setMsg(t, kind) { msg.textContent = t || ''; msg.className = 'lb-msg' + (kind ? ' ' + kind : ''); }
   modal.querySelector('#lb-close').onclick = closePublish;
-  modal.querySelector('#lb-cancel').onclick = closePublish;
-  modal.onclick = function (e) { if (e.target === modal) closePublish(); };
   modal.querySelector('#lb-vis-pub').onclick = function () { sel('public'); };
   modal.querySelector('#lb-vis-priv').onclick = function () { sel('private'); };
   function sel(v) {
