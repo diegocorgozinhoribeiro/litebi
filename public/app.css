@@ -69,6 +69,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 button.secondary { color: var(--lb-ink) !important; background: var(--lb-surface-2) !important; border: 1px solid var(--lb-line) !important; }
 button.secondary:hover { color: var(--lb-ink) !important; background: var(--lb-surface-3) !important; }
 header, .site-nav, .topbar { background: color-mix(in srgb, var(--lb-bg) 88%, transparent) !important; border-color: var(--lb-line) !important; box-shadow: 0 1px 0 var(--lb-line-soft) !important; backdrop-filter: blur(18px); }
+header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 max(22px, calc((100% - 1180px) / 2)); position: sticky; top: 0; z-index: 40; }
+header > nav { display: flex; align-items: center; gap: 9px; }
+header .brand { min-height: 40px; font-size: 21px !important; font-weight: 850 !important; line-height: 1 !important; }
+header .brand-word { font-size: 21px !important; font-weight: 850 !important; }
+header .btn { min-height: 40px; padding: 10px 15px !important; font-size: 13px !important; line-height: 1.2 !important; }
+header .primary, header .ghost { border-radius: 10px !important; }
+.account { position: relative; }
+.account-toggle { display: inline-flex; align-items: center; gap: 8px; }
+.account-menu { display: none; position: absolute; right: 0; top: calc(100% + 8px); width: 210px; padding: 8px; border: 1px solid var(--lb-line) !important; border-radius: var(--lb-radius-md); background: var(--lb-surface) !important; box-shadow: var(--lb-shadow) !important; z-index: 80; }
+.account-menu.open { display: grid; gap: 3px; }
+.account-menu a, .account-menu button { width: 100%; min-height: 38px; display: flex; align-items: center; border: 0; border-radius: var(--lb-radius-sm); padding: 9px 10px; background: transparent !important; color: var(--lb-ink) !important; font: inherit; font-size: 13px; text-align: left; text-decoration: none; cursor: pointer; box-shadow: none !important; }
+.account-menu a:hover, .account-menu button:hover { background: var(--lb-surface-2) !important; }
+.user { display: inline-block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--lb-muted) !important; background: var(--lb-surface-2) !important; border: 1px solid var(--lb-line) !important; border-radius: 999px !important; padding: 8px 12px !important; font-size: 13px !important; }
 .account-menu { background: var(--lb-surface) !important; border-color: var(--lb-line) !important; box-shadow: var(--lb-shadow) !important; }
 .account-menu a:hover, .account-menu button:hover { background: var(--lb-surface-2) !important; }
 .card, .feature, .preview, .dash-card, .team-card, .panel, .profile-card, .stat, .empty, .dropzone, .comp-card, .modal-card, .modal { background: var(--lb-surface) !important; border-color: var(--lb-line) !important; box-shadow: var(--lb-shadow); }
@@ -120,5 +133,7 @@ body.dark .notion-blue-bg, body.lb-dark .notion-blue-bg { background: var(--lb-a
 .builder-page .intake-modal .feature-row { display: grid; }
 .builder-page .intake-modal .upload-hero { padding-top: 34px; }
 .builder-page .intake-modal.hidden { display: none !important; }
+.builder-page.embedded > header { display: none !important; }
 @media (max-width: 700px) { .brand::before, .site-brand::before { width: 28px; height: 28px; } .brand-word { font-size: 18px; } }
+@media (max-width: 640px) { header { min-height: 64px; padding-inline: 16px; } header > nav > .btn.ghost:first-child { display: none; } .account .user { max-width: 92px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; } }

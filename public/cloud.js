@@ -48,7 +48,8 @@
 
   // ---------- barra ----------
   var bar = el('div', { id: 'lb-bar' });
-  document.body.appendChild(bar);
+  // A barra superior antiga foi removida do builder; `bar` permanece apenas
+  // como referência inerte para não duplicar navegação na página.
   var toolTray = el('div', { id: 'lb-tools' });
   document.body.appendChild(toolTray);
 
@@ -57,9 +58,11 @@
     var builder = document.getElementById('screen-upload') || document.getElementById('screen-dashboard');
     var dashboard = document.getElementById('screen-dashboard');
     var isDashboard = dashboard && !dashboard.classList.contains('hidden');
-    bar.style.display = builder && !embedded ? 'flex' : 'none';
+    // O builder não usa navbar próprio. A navegação pertence às páginas do app;
+    // manter esta barra aqui criava um segundo header visual no editor.
+    bar.style.display = 'none';
     toolTray.style.display = isDashboard && !embedded ? 'flex' : 'none';
-    document.body.style.paddingTop = builder && !embedded ? '72px' : '0';
+    document.body.style.paddingTop = '0';
   }
   syncBarVisibility();
   var screenObserver = new MutationObserver(syncBarVisibility);

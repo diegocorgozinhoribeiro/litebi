@@ -720,6 +720,13 @@ button:disabled { opacity: .6; cursor: wait; }
 <link rel="stylesheet" href="/app.css">
 </head>
 <body class="builder-page">
+<header><a class="brand" href="/home"><span class="brand-word">Lite<span>BI</span></span></a><nav>
+  <a class="btn ghost" href="/home">Início</a>
+  <a class="btn primary" href="/builder?new=1">+ Novo dashboard</a>
+  <div class="account"><button class="btn ghost account-toggle" id="accountToggle"><span class="user" id="userName">Conta</span>⌄</button>
+    <div class="account-menu" id="accountMenu"><a href="/profile">Meu perfil</a><a href="/home#gallery">Dashboards publicados</a><button id="themeToggle" data-theme-toggle type="button" role="switch" aria-label="Alternar tema claro e escuro"><span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-thumb"></span></span><span class="theme-switch-caption">Tema</span></button><button id="logout">Sair</button></div>
+  </div>
+</nav></header>
 <!-- ===== TELA 1: UPLOAD ===== -->
 <div id="intakeBackdrop" class="intake-backdrop"></div>
 <div id="aiLoading" class="ai-loading"><div class="ai-loading-card"><h2>Montando seu dashboard</h2><p id="aiLoadingText">A IA está analisando a estrutura da base e escolhendo os melhores indicadores para o foco informado.</p><small id="aiLoadingTimer" style="display:block;margin-top:12px;color:var(--notion-text-soft,#667085)">Iniciando…</small></div></div>
@@ -2013,5 +2020,6 @@ button:disabled { opacity: .6; cursor: wait; }
 
 </script>
 <script src="/cloud.js"></script>
+<script src="/builder-nav.js"></script>
 </body>
 </html>
