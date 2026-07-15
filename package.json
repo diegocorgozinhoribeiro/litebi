@@ -9,14 +9,19 @@
   },
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check db.js && node --check auth.js && node --check public/cloud.js && node --check public/theme.js && node --check public/builder-nav.js && node --check public/new-dashboard-modal.js && node --check public/team-management.js && node --check public/profile-enhancements.js",
+    "test": "npm run check"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "compression": "^1.8.1",
     "connect-pg-simple": "^9.0.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.5.2",
     "express-session": "^1.18.0",
+    "helmet": "^8.3.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-local": "^1.0.0",

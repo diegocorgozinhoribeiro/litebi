@@ -31,8 +31,6 @@
     });
   }
   document.addEventListener('click', function (event) {
-    var toggle = event.target.closest('[data-theme-toggle]');
-    if (toggle) LiteBITheme.toggle();
     var close = event.target.closest('[data-menu-close]');
     if (close) close.closest('.account')?.classList.remove('open');
   });

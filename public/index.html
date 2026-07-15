@@ -563,7 +563,7 @@ body { background: var(--notion-bg-soft); }
 .upload-hero h1 { font-size: clamp(32px, 5vw, 48px); }
 .upload-hero p { font-size: 18px; color: var(--notion-text-soft); max-width: 560px; margin: 0 auto; }
 .dropzone { margin: 28px auto 0; max-width: 640px; border: 2px dashed var(--notion-border); border-radius: 16px;
-  padding: 54px 24px; text-align: center; cursor: pointer; background: var(--notion-surface); transition: all .2s; }
+  padding: 54px 24px; text-align: center; cursor: pointer; background: var(--notion-surface); transition: border-color .2s, background-color .2s, box-shadow .2s; }
 .dropzone:hover, .dropzone.drag { border-color: var(--notion-blue); background: var(--notion-blue-bg); }
 .dropzone .dz-ic { font-size: 42px; }
 .dropzone h3 { margin-top: 10px; }
@@ -720,9 +720,12 @@ button:disabled { opacity: .6; cursor: wait; }
 <link rel="stylesheet" href="/app.css">
 </head>
 <body class="builder-page">
+<a class="skip-link" href="#screen-dashboard">Pular para o editor</a>
 <header><a class="brand" href="/home"><span class="brand-word">Lite<span>BI</span></span></a><nav>
   <a class="btn ghost" href="/home">Início</a>
   <a class="btn primary" href="/builder?new=1">+ Novo dashboard</a>
+  <button class="btn ghost" id="builderExportNav" type="button">Exportar</button>
+  <button class="btn primary" id="builderPublishNav" type="button">Publicar</button>
   <div class="account"><button class="btn ghost account-toggle" id="accountToggle"><span class="user" id="userName">Conta</span>⌄</button>
     <div class="account-menu" id="accountMenu"><a href="/profile">Meu perfil</a><a href="/home#gallery">Dashboards publicados</a><button id="themeToggle" data-theme-toggle type="button" role="switch" aria-label="Alternar tema claro e escuro"><span class="theme-switch-track" aria-hidden="true"><span class="theme-switch-thumb"></span></span><span class="theme-switch-caption">Tema</span></button><button id="logout">Sair</button></div>
   </div>
@@ -743,7 +746,7 @@ button:disabled { opacity: .6; cursor: wait; }
     <div class="formats">Formatos suportados: .xlsx, .xls, .csv · até 30 MB</div>
     <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" hidden>
   </div>
-  <div id="uploadError" class="err"></div>
+  <div id="uploadError" class="err" role="alert" aria-live="polite"></div>
   <div class="feature-row center-narrow" style="max-width:900px">
     <div class="feature"><div class="fi">✨</div><h4>KPIs guiados</h4><p>Soma, média, máximo, contagem, diferença e percentuais — escolhendo por clique.</p></div>
     <div class="feature"><div class="fi">◑</div><h4>Gráficos visuais</h4><p>Colunas, barras, linha e pizza com validação automática de compatibilidade.</p></div>
@@ -792,8 +795,10 @@ button:disabled { opacity: .6; cursor: wait; }
       <button id="btnAddTable" class="small">+ Tabela</button>
       <button id="btnAddFilter" class="small secondary">≡ Filtro</button>
       <button id="btnAuto" class="small secondary">✨ Montar automaticamente</button>
+      <button id="btnDesign" class="small secondary">Design</button>
     </div>
     <div class="spacer"></div>
+    <div id="saveStatus" class="save-status" role="status" aria-live="polite"></div>
     <div class="role-box">Perfil:
       <select id="roleSelect">
         <option value="owner">Dono</option>
@@ -801,7 +806,7 @@ button:disabled { opacity: .6; cursor: wait; }
         <option value="viewer">Visualizador</option>
       </select>
     </div>
-    <button id="btnExport">⤓ Exportar dashboard (.html)</button>
+    <button id="btnExport" hidden aria-hidden="true" tabindex="-1">⤓ Exportar dashboard (.html)</button>
     <button id="btnNewBase" class="small ghost editor-only">Substituir base</button>
   </div>
   <div id="filterChips" class="filter-bar"></div>
@@ -815,43 +820,45 @@ button:disabled { opacity: .6; cursor: wait; }
 </main>
 
 <!-- ===== MODAIS ===== -->
-<div class="modal-backdrop" id="kpiModal"><div class="modal">
-  <div class="modal-head"><h3 id="kpiModalTitle">Adicionar KPI</h3><button class="icon-btn" data-close="kpiModal">✕</button></div>
+<div class="modal-backdrop" id="kpiModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="kpiModalTitle">
+  <div class="modal-head"><h3 id="kpiModalTitle">Adicionar KPI</h3><button class="icon-btn" data-close="kpiModal" aria-label="Fechar modal de KPI">✕</button></div>
   <div class="modal-body"><form id="kpiForm" onsubmit="return false"></form></div>
   <div class="modal-foot"><button id="kpiSave">Salvar KPI</button></div>
 </div></div>
 
-<div class="modal-backdrop" id="chartModal"><div class="modal">
-  <div class="modal-head"><h3 id="chartModalTitle">Adicionar gráfico</h3><button class="icon-btn" data-close="chartModal">✕</button></div>
+<div class="modal-backdrop" id="chartModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="chartModalTitle">
+  <div class="modal-head"><h3 id="chartModalTitle">Adicionar gráfico</h3><button class="icon-btn" data-close="chartModal" aria-label="Fechar modal de gráfico">✕</button></div>
   <div class="modal-body"><form id="chartForm" onsubmit="return false"></form></div>
   <div class="modal-foot"><button id="chartSave">Salvar gráfico</button></div>
 </div></div>
 
-<div class="modal-backdrop" id="tableModal"><div class="modal">
-  <div class="modal-head"><h3 id="tableModalTitle">Adicionar tabela</h3><button class="icon-btn" data-close="tableModal">✕</button></div>
+<div class="modal-backdrop" id="tableModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="tableModalTitle">
+  <div class="modal-head"><h3 id="tableModalTitle">Adicionar tabela</h3><button class="icon-btn" data-close="tableModal" aria-label="Fechar modal de tabela">✕</button></div>
   <div class="modal-body"><form id="tableForm" onsubmit="return false"></form></div>
   <div class="modal-foot"><button id="tableSave">Salvar tabela</button></div>
 </div></div>
 
-<div class="modal-backdrop" id="filterModal"><div class="modal">
-  <div class="modal-head"><h3>Adicionar filtro</h3><button class="icon-btn" data-close="filterModal">✕</button></div>
+<div class="modal-backdrop" id="filterModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="filterModalTitle">
+  <div class="modal-head"><h3 id="filterModalTitle">Adicionar filtro</h3><button class="icon-btn" data-close="filterModal" aria-label="Fechar modal de filtro">✕</button></div>
   <div class="modal-body"><form id="filterForm" onsubmit="return false"></form></div>
   <div class="modal-foot"><button id="filterSave">Aplicar filtro</button></div>
 </div></div>
 
-<div class="modal-backdrop" id="exportModal"><div class="modal">
-  <div class="modal-head"><h3>Exportar dashboard</h3><button class="icon-btn" data-close="exportModal">✕</button></div>
+<div class="modal-backdrop" id="exportModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="designModalTitle">
+  <div class="modal-head"><h3 id="designModalTitle">Design do dashboard</h3><button class="icon-btn" data-close="exportModal" aria-label="Fechar configurações de design">✕</button></div>
   <div class="modal-body">
-    <p class="notion-muted" style="font-size:13px;margin-top:0">Gere um arquivo <strong>.html</strong> independente com seu dashboard. Defina título, subtítulo e cores.</p>
+    <p class="notion-muted" style="font-size:13px;margin-top:0">Personalize a identidade do dashboard. O design será salvo no editor e usado ao publicar ou exportar.</p>
     <div class="field"><label>Título do dashboard</label><input id="expTitle" placeholder="Ex.: Resultados Q2"></div>
     <div class="field"><label>Subtítulo</label><input id="expSubtitle" placeholder="Ex.: Desempenho comercial por região e produto"></div>
     <div class="color-cols">
       <div class="field"><label>Cor 1 (principal)</label><input id="expC1" type="color" value="#5e9fe8"></div>
       <div class="field"><label>Cor 2 (secundária)</label><input id="expC2" type="color" value="#72bc8f"></div>
     </div>
+    <div class="field"><label for="expFont">Fonte do dashboard</label><select id="expFont"><option value="DM Sans">DM Sans</option><option value="Inter">Inter</option><option value="Manrope">Manrope</option><option value="system-ui">System UI</option><option value="Georgia">Georgia</option></select></div>
+    <div class="field"><label for="expLogo">Logo da empresa</label><input id="expLogo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><small class="notion-muted">PNG, JPG, WEBP ou SVG até 500 KB. A logo fica salva no design deste dashboard.</small></div>
     <div class="exp-preview" id="expPreview"><span id="expPreviewTitle">Meu Dashboard</span></div>
   </div>
-  <div class="modal-foot"><button id="exportConfirm">Gerar .html</button></div>
+  <div class="modal-foot"><button id="exportConfirm">Salvar design</button></div>
 </div></div>
 <script>
 /* ============================================================
@@ -863,7 +870,7 @@ button:disabled { opacity: .6; cursor: wait; }
   // ---------- Estado ----------
   const STORAGE_KEY = 'litebi_state_v2';
   const LARGE_STATE_DB = 'litebi_state_db_v1';
-  const DEFAULT_THEME = { title: 'Meu Dashboard', subtitle: '', color1: '#5e9fe8', color2: '#72bc8f' };
+  const DEFAULT_THEME = { title: 'Meu Dashboard', subtitle: '', color1: '#5e9fe8', color2: '#72bc8f', fontFamily: 'DM Sans', logoData: '' };
   const state = {
     meta: null, columns: [], rows: [], components: [], filters: [],
     role: 'owner', theme: Object.assign({}, DEFAULT_THEME)
@@ -997,7 +1004,7 @@ button:disabled { opacity: .6; cursor: wait; }
       const saved = JSON.parse(raw);
       stateNeedsRows = !!saved.__rowsInIndexedDb;
       Object.assign(state, saved);
-      if (!state.theme) state.theme = Object.assign({}, DEFAULT_THEME);
+      state.theme = Object.assign({}, DEFAULT_THEME, state.theme || {});
       state.components.forEach((c) => { if (c.placed === undefined) c.placed = true; });
       return !!(state.meta && (state.rows.length || stateNeedsRows));
     } catch (e) { return false; }
@@ -1154,10 +1161,10 @@ button:disabled { opacity: .6; cursor: wait; }
     return '<div class="comp-card">' +
       '<div class="comp-head"><span class="comp-title" id="title-' + comp.id + '"></span>' +
       (locked ? '' : '<span class="comp-actions">' +
-        '<button class="icon-btn" data-act="edit" data-id="' + comp.id + '" title="Editar">✎</button>' +
-        '<button class="icon-btn" data-act="dup" data-id="' + comp.id + '" title="Duplicar">⎘</button>' +
-        '<button class="icon-btn" data-act="unplace" data-id="' + comp.id + '" title="Voltar para a bandeja">↩</button>' +
-        '<button class="icon-btn" data-act="del" data-id="' + comp.id + '" title="Excluir">✕</button></span>') +
+        '<button class="icon-btn" data-act="edit" data-id="' + comp.id + '" title="Editar" aria-label="Editar componente">✎</button>' +
+        '<button class="icon-btn" data-act="dup" data-id="' + comp.id + '" title="Duplicar" aria-label="Duplicar componente">⎘</button>' +
+        '<button class="icon-btn" data-act="unplace" data-id="' + comp.id + '" title="Voltar para a bandeja" aria-label="Mover componente para a bandeja">↩</button>' +
+        '<button class="icon-btn" data-act="del" data-id="' + comp.id + '" title="Excluir" aria-label="Excluir componente">✕</button></span>') +
       '</div><div class="comp-body" id="body-' + comp.id + '"></div></div>';
   }
 
@@ -1201,7 +1208,7 @@ button:disabled { opacity: .6; cursor: wait; }
       '<div class="tray-chip" data-id="' + c.id + '"><span class="chip-ic">' + typeIcon(c.type) + '</span><span class="chip-t">' + esc(c.title) + '</span><span class="chip-tag">' + typeLabel(c.type) + '</span></div>'
     ).join('');
   }
-  function refreshAll() { state.components.filter((c) => c.placed).forEach(renderComponent); }
+  function refreshAll() { document.body.style.fontFamily = (state.theme && state.theme.fontFamily) || 'DM Sans'; state.components.filter((c) => c.placed).forEach(renderComponent); }
   function updateEmptyHint() {
     const placed = state.components.filter((c) => c.placed).length;
     const hint = $('#emptyHint'); if (hint) hint.classList.toggle('hidden', placed > 0);
@@ -1648,9 +1655,18 @@ button:disabled { opacity: .6; cursor: wait; }
   // ============================================================
   //  MODAIS
   // ============================================================
-  function openModal(id) { $('#' + id).classList.add('open'); }
-  function closeModal(id) { $('#' + id).classList.remove('open'); }
-  function field(label, control) { return '<div class="field"><label>' + label + '</label>' + control + '</div>'; }
+  let modalReturnFocus = null;
+  function openModal(id) {
+    modalReturnFocus = document.activeElement;
+    const backdrop = $('#' + id);
+    backdrop.classList.add('open');
+    requestAnimationFrame(() => { const target = backdrop.querySelector('input:not([type="hidden"]), select, textarea, button'); if (target) target.focus(); });
+  }
+  function closeModal(id) {
+    $('#' + id).classList.remove('open');
+    if (modalReturnFocus && document.contains(modalReturnFocus)) modalReturnFocus.focus();
+  }
+  function field(label, control) { const match = control.match(/\bid="([^"]+)"/); return '<div class="field"><label' + (match ? ' for="' + match[1] + '"' : '') + '>' + label + '</label>' + control + '</div>'; }
   function opt(v, l, cur) { return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + l + '</option>'; }
   function colOptions(filter) { return state.columns.filter(filter || (() => true)).map((c) => '<option value="' + esc(c.name) + '">' + esc(c.name) + ' (' + TYPE_BADGE[c.type] + ')</option>').join(''); }
 
@@ -1802,19 +1818,31 @@ button:disabled { opacity: .6; cursor: wait; }
     $('#expTitle').value = state.theme.title || 'Meu Dashboard';
     $('#expSubtitle').value = state.theme.subtitle || '';
     $('#expC1').value = state.theme.color1; $('#expC2').value = state.theme.color2;
+    $('#expFont').value = state.theme.fontFamily || 'DM Sans';
+    $('#expLogo').value = '';
     syncExpPreview(); openExportListeners(); openModal('exportModal');
   }
   function openExportListeners() {
-    $('#expC1').oninput = syncExpPreview; $('#expC2').oninput = syncExpPreview; $('#expTitle').oninput = syncExpPreview; $('#expSubtitle').oninput = syncExpPreview;
+    $('#expC1').oninput = syncExpPreview; $('#expC2').oninput = syncExpPreview; $('#expTitle').oninput = syncExpPreview; $('#expSubtitle').oninput = syncExpPreview; $('#expFont').onchange = syncExpPreview;
+    $('#expLogo').onchange = (event) => {
+      const file = event.target.files && event.target.files[0]; if (!file) return;
+      if (file.size > 500 * 1024) { event.target.value = ''; alert('A logo deve ter até 500 KB.'); return; }
+      const reader = new FileReader(); reader.onload = () => { state.theme.logoData = reader.result; syncExpPreview(); }; reader.readAsDataURL(file);
+    };
   }
   function syncExpPreview() {
     const c1 = $('#expC1').value, c2 = $('#expC2').value;
     $('#expPreview').style.background = 'linear-gradient(135deg,' + c1 + ',' + c2 + ')';
     $('#expPreviewTitle').textContent = $('#expTitle').value || 'Meu Dashboard';
+    $('#expPreview').style.fontFamily = $('#expFont').value || 'DM Sans';
+  }
+  function saveDesign() {
+    state.theme = Object.assign({}, state.theme, { title: $('#expTitle').value.trim() || 'Meu Dashboard', subtitle: $('#expSubtitle').value.trim(), color1: $('#expC1').value, color2: $('#expC2').value, fontFamily: $('#expFont').value || 'DM Sans' });
+    save(); refreshAll(); closeModal('exportModal');
   }
   function doExport() {
-    const theme = { title: $('#expTitle').value.trim() || 'Meu Dashboard', subtitle: $('#expSubtitle').value.trim(), color1: $('#expC1').value, color2: $('#expC2').value };
-    state.theme = theme; save(); refreshAll();
+    if (!state.components.length) { alert('Adicione ao menos um componente antes de exportar.'); return; }
+    const theme = Object.assign({}, DEFAULT_THEME, state.theme || {});
     const html = buildExportHtml(theme);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const a = document.createElement('a');
@@ -1822,7 +1850,6 @@ button:disabled { opacity: .6; cursor: wait; }
     a.download = (theme.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-|-$/g, '') || 'dashboard') + '.html';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    closeModal('exportModal');
   }
   function buildExportHtml(theme) {
     const payload = { columns: state.columns, rows: state.rows, components: state.components, filters: state.filters, theme, meta: state.meta };
@@ -1843,6 +1870,7 @@ button:disabled { opacity: .6; cursor: wait; }
   const EXPORT_CSS = ':root{--c1:#5e9fe8;--c2:#72bc8f;--bg:#f4f6f9;--surface:#fff;--surface-soft:#f8fafc;--text:#172033;--soft:#667085;--muted:#98a2b3;--border:#e7ebf0;--shadow:0 8px 24px rgba(16,24,40,.06)}' +
     '*{box-sizing:border-box}html{background:var(--bg)}body{margin:0;background:radial-gradient(circle at 0 0,rgba(94,159,232,.08),transparent 34rem),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}' +
     '.dash-header{position:relative;overflow:hidden;padding:52px max(28px,calc((100% - 1240px)/2));color:#fff;background:linear-gradient(120deg,var(--c1),var(--c2));box-shadow:0 10px 30px rgba(27,64,102,.15)}' +
+    '.dash-logo{position:relative;z-index:1;display:block;width:auto;height:42px;max-width:180px;object-fit:contain;object-position:left center;margin-bottom:20px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.12))}' +
     '.dash-header:after{content:"";position:absolute;width:340px;height:340px;right:-90px;top:-180px;border:1px solid rgba(255,255,255,.22);border-radius:50%;box-shadow:0 0 0 34px rgba(255,255,255,.06),0 0 0 70px rgba(255,255,255,.04)}' +
     '.dash-header .eyebrow{position:relative;z-index:1;display:block;margin-bottom:12px;font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;opacity:.78}' +
     '.dash-header h1{position:relative;z-index:1;margin:0;max-width:900px;font-size:clamp(28px,4vw,44px);line-height:1.08;font-weight:800;letter-spacing:-.04em}' +
@@ -1867,6 +1895,7 @@ button:disabled { opacity: .6; cursor: wait; }
     var D = window.__LITEBI__ || {};
     var cols = D.columns || [], rows = D.rows || [], comps = D.components || [], filters = D.filters || [], theme = D.theme || {}, meta = D.meta || {};
     var c1 = theme.color1 || '#5e9fe8', c2 = theme.color2 || '#72bc8f';
+    document.body.style.fontFamily = theme.fontFamily || 'DM Sans';
     document.documentElement.style.setProperty('--c1', c1);
     document.documentElement.style.setProperty('--c2', c2);
 
@@ -1887,7 +1916,8 @@ button:disabled { opacity: .6; cursor: wait; }
 
     var root = document.getElementById('dash-root');
     var when = meta.uploadDate ? new Date(meta.uploadDate).toLocaleDateString('pt-BR') : '';
-    root.innerHTML = '<div class="dash-header"><span class="eyebrow">LITEBI · ANALYTICS</span><h1>' + esc(theme.title) + '</h1>' + (theme.subtitle ? '<h2>' + esc(theme.subtitle) + '</h2>' : '') + '<p>Gerado pelo LiteBI' + (meta.fileName ? ' \u00b7 fonte: ' + esc(meta.fileName) : '') + ' \u00b7 ' + new Date().toLocaleString('pt-BR') + '</p></div><div class="board" id="board"></div><div class="foot">' + (meta.rowCount || rows.length) + ' registros analisados.</div>';
+    var logo = theme.logoData ? '<img class="dash-logo" src="' + esc(theme.logoData) + '" width="44" height="44" alt="Logo da empresa">' : '';
+    root.innerHTML = '<div class="dash-header">' + logo + '<span class="eyebrow">LITEBI · ANALYTICS</span><h1>' + esc(theme.title) + '</h1>' + (theme.subtitle ? '<h2>' + esc(theme.subtitle) + '</h2>' : '') + '<p>Gerado pelo LiteBI' + (meta.fileName ? ' \u00b7 fonte: ' + esc(meta.fileName) : '') + ' \u00b7 ' + new Date().toLocaleString('pt-BR') + '</p></div><div class="board" id="board"></div><div class="foot">' + (meta.rowCount || rows.length) + ' registros analisados.</div>';
     var board = document.getElementById('board');
 
     comps.forEach(function (comp) {
@@ -1954,13 +1984,16 @@ button:disabled { opacity: .6; cursor: wait; }
     $('#btnAddTable').onclick = () => openTableModal(null);
     $('#btnAddFilter').onclick = openFilterModal;
     $('#btnAuto').onclick = autoBuild;
+    $('#btnDesign').onclick = openExportModal;
     $('#clearFilters').onclick = () => { state.filters = []; renderFilterBar(); refreshAll(); save(); };
-    $('#btnExport').onclick = openExportModal;
+    $('#btnExport').onclick = doExport;
     $('#btnNewBase').onclick = () => { if (confirm('Começar um novo dashboard e descartar a base atual?')) { resetBuilder(); } };
     $('#roleSelect').onchange = (e) => { state.role = e.target.value; save(); applyRole(); };
 
-    $('#kpiSave').onclick = saveKpi; $('#chartSave').onclick = saveChart; $('#tableSave').onclick = saveTable; $('#filterSave').onclick = saveFilter; $('#exportConfirm').onclick = doExport;
+    $('#kpiSave').onclick = saveKpi; $('#chartSave').onclick = saveChart; $('#tableSave').onclick = saveTable; $('#filterSave').onclick = saveFilter; $('#exportConfirm').onclick = saveDesign;
     $$('[data-close]').forEach((b) => b.onclick = () => closeModal(b.dataset.close));
+    $$('.modal-backdrop').forEach((backdrop) => backdrop.addEventListener('click', (event) => { if (event.target === backdrop) closeModal(backdrop.id); }));
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { const open = $('.modal-backdrop.open'); if (open) closeModal(open.id); } });
 
     document.addEventListener('pointerdown', onPointerDown);
     $('#grid').addEventListener('click', (e) => {

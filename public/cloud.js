@@ -100,11 +100,11 @@
       if (localStorage.getItem('litebi-theme') === 'dark') document.body.classList.add('lb-dark');
       var pub = el('button', { class: 'lb-btn lb-primary', id: 'lb-publish' }, '✨ Publicar');
       pub.onclick = openPublish;
-      var tools = [action('btnAddKpi', '+ KPI'), action('btnAddChart', '+ Gráfico'), action('btnAddTable', '+ Tabela'), action('btnAuto', '✨ IA'), action('btnExport', 'Exportar')];
+      var tools = [action('btnAddKpi', '+ KPI'), action('btnAddChart', '+ Gráfico'), action('btnAddTable', '+ Tabela'), action('btnAuto', '✨ IA'), action('btnDesign', 'Design')];
       var out = accountMenu.querySelector('#lb-logout');
       out.onclick = function () { api('POST', '/auth/logout').then(function () { location.reload(); }); };
       bar.appendChild(brand); bar.appendChild(home); bar.appendChild(fresh); bar.appendChild(account);
-      tools.forEach(function (item) { toolTray.appendChild(item); }); toolTray.appendChild(pub);
+      tools.forEach(function (item) { toolTray.appendChild(item); });
     } else {
       bar.appendChild(el('a', { class: 'lb-btn lb-ghost', href: '/login' }, 'Entrar'));
       bar.appendChild(el('a', { class: 'lb-btn lb-primary', href: '/signup' }, 'Criar conta'));
@@ -114,22 +114,23 @@
   // ---------- modal de publicação ----------
   var modal = el('div', { class: 'lb-modal', id: 'lb-modal' });
   modal.innerHTML = ''
-    + '<div class="lb-card">'
-    + '<button class="lb-x" id="lb-close">×</button>'
-    + '<h3>Publicar dashboard</h3>'
+    + '<div class="lb-card" role="dialog" aria-modal="true" aria-labelledby="lb-publish-title">'
+    + '<button class="lb-x" id="lb-close" aria-label="Fechar publicação">×</button>'
+    + '<h3 id="lb-publish-title">Publicar dashboard</h3>'
     + '<p class="sub">Gere um link para compartilhar este dashboard.</p>'
-    + '<div class="lb-field"><label>Título</label><input type="text" id="lb-title" placeholder="Meu Dashboard"></div>'
+    + '<div class="lb-field"><label for="lb-title">Título</label><input type="text" id="lb-title" name="dashboardTitle" placeholder="Meu Dashboard"></div>'
     + '<div class="lb-field"><label>Visibilidade</label><div class="lb-vis">'
     + '<label class="sel" id="lb-vis-pub"><input type="radio" name="lbvis" value="public" checked><span><b>Público</b><span>Qualquer pessoa com o link vê.</span></span></label>'
     + '<label id="lb-vis-priv"><input type="radio" name="lbvis" value="private"><span><b>Privado</b><span>Apenas você (logado) vê.</span></span></label>'
     + '</div></div>'
-    + '<div class="lb-msg" id="lb-msg"></div>'
+    + '<div class="lb-msg" id="lb-msg" role="status" aria-live="polite"></div>'
     + '<div id="lb-result" style="display:none"><div class="lb-link"><input type="text" id="lb-url" readonly><button class="lb-btn lb-ghost" id="lb-copy">Copiar</button></div></div>'
     + '<div class="lb-actions"><button class="lb-btn lb-primary" id="lb-save">Publicar</button></div>'
     + '</div>';
   document.body.appendChild(modal);
 
   var msg = modal.querySelector('#lb-msg');
+  var publishReturnFocus = null;
   function setMsg(t, kind) { msg.textContent = t || ''; msg.className = 'lb-msg' + (kind ? ' ' + kind : ''); }
   modal.querySelector('#lb-close').onclick = closePublish;
   modal.querySelector('#lb-vis-pub').onclick = function () { sel('public'); };
@@ -151,14 +152,24 @@
       alert('Crie um dashboard com ao menos um componente antes de publicar.');
       return;
     }
+    publishReturnFocus = document.activeElement;
     setMsg(''); modal.querySelector('#lb-result').style.display = 'none';
     modal.querySelector('#lb-save').style.display = '';
     modal.querySelector('#lb-save').textContent = (b.getCloudId && b.getCloudId()) ? 'Salvar alterações' : 'Publicar';
     modal.querySelector('#lb-title').value = (b.getTitle && b.getTitle()) || 'Meu Dashboard';
     sel('public');
     modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    modal.querySelector('#lb-title').focus();
   }
-  function closePublish() { modal.classList.remove('open'); }
+  function closePublish() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+    if (publishReturnFocus && document.contains(publishReturnFocus)) publishReturnFocus.focus();
+  }
+  modal.addEventListener('click', function (event) { if (event.target === modal) closePublish(); });
+  document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && modal.classList.contains('open')) closePublish(); });
+  window.__litebiPublish = openPublish;
 
   modal.querySelector('#lb-save').onclick = function () {
     var b = window.__litebiBridge;

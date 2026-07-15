@@ -13,8 +13,13 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
-  max: 10,
+  application_name: 'litebi',
+  max: Math.max(2, Number(process.env.DB_POOL_MAX) || 10),
   idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  statement_timeout: 15000,
+  idle_in_transaction_session_timeout: 15000,
+  keepAlive: true,
 });
 
 pool.on('error', (err) => {
@@ -49,7 +54,11 @@ async function init() {
     );
   `);
 
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_dashboards_user ON dashboards(user_id);`);
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_dashboards_user ON dashboards(user_id);
+    CREATE INDEX IF NOT EXISTS idx_dashboards_user_updated ON dashboards(user_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_dashboards_public_updated ON dashboards(updated_at DESC) WHERE visibility = 'public';
+  `);
 
   await pool.query(`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
@@ -64,6 +73,7 @@ async function init() {
       UNIQUE (requester_id, addressee_id)
     );
     CREATE INDEX IF NOT EXISTS idx_friendships_addressee ON friendships(addressee_id, status);
+    CREATE INDEX IF NOT EXISTS idx_friendships_requester ON friendships(requester_id, status);
   `);
 
   await pool.query(`
@@ -89,6 +99,7 @@ async function init() {
     );
     CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
     CREATE INDEX IF NOT EXISTS idx_dashboard_shares_team ON dashboard_shares(team_id);
+    CREATE INDEX IF NOT EXISTS idx_dashboard_shares_dashboard ON dashboard_shares(dashboard_id);
   `);
 
   console.log('[LiteBI] Tabelas verificadas/criadas com sucesso.');

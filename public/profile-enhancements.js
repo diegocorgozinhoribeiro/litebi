@@ -5,6 +5,14 @@
   var api = function (method, url, body) { return fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: body ? JSON.stringify(body) : undefined }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); }); };
   var id = new URLSearchParams(location.search).get('user') || ((location.pathname.match(/^\/u\/(\d+)/) || [])[1]);
 
+  document.querySelectorAll('.field').forEach(function (field) {
+    var label = field.querySelector('label');
+    var control = field.querySelector('input, textarea, select');
+    if (label && control && control.id) label.htmlFor = control.id;
+  });
+  var profileMessage = $('#profileMsg');
+  if (profileMessage) { profileMessage.setAttribute('role', 'status'); profileMessage.setAttribute('aria-live', 'polite'); }
+
   api('GET', '/api/me').then(function (r) {
     var toggle = document.getElementById('accountToggle');
     if (toggle && r.data && r.data.user && toggle.firstChild) toggle.firstChild.nodeValue = (r.data.user.name || 'Conta') + ' ⌄';
@@ -29,8 +37,19 @@
   var avatar = $('#avatar');
   if (avatar && !id) {
     new MutationObserver(enhanceOwnAvatar).observe(avatar, { childList: true });
-    setInterval(enhanceOwnAvatar, 500);
     enhanceOwnAvatar();
+  }
+
+  var search = $('#search');
+  if (search && search.oninput) {
+    search.setAttribute('aria-label', 'Buscar pessoa por nome ou e-mail');
+    search.placeholder = 'Buscar pessoa…';
+    var originalSearch = search.oninput;
+    var searchTimer;
+    search.oninput = function (event) {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () { originalSearch.call(search, event); }, 250);
+    };
   }
 
   function renderFriendAction(friendship, profileId) {

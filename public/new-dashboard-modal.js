@@ -20,13 +20,19 @@
   document.body.appendChild(modal);
 
   var frame = document.getElementById('newDashboardFrame');
+  var returnFocus = null;
   function close() {
     modal.classList.remove('open');
     frame.src = 'about:blank';
+    document.body.style.overflow = '';
+    if (returnFocus && document.contains(returnFocus)) returnFocus.focus();
   }
-  function open() {
+  function open(trigger) {
+    returnFocus = trigger || document.activeElement;
     frame.src = '/builder?new=1&embedded=1';
     modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('newDashboardClose').focus();
   }
 
   document.getElementById('newDashboardClose').onclick = close;
@@ -36,7 +42,7 @@
     var link = event.target.closest('a[href="/builder?new=1"]');
     if (!link) return;
     event.preventDefault();
-    open();
+    open(link);
   });
   window.addEventListener('message', function (event) {
     if (event.origin !== location.origin || !event.data || event.data.type !== 'litebi-dashboard-ready') return;

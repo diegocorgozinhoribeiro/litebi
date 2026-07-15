@@ -40,6 +40,7 @@ body.dark {
   --lb-shadow: 0 0 0 1px rgba(232,244,250,.08);
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; }
 body {
   background: var(--lb-bg) !important;
@@ -47,8 +48,14 @@ body {
   font-family: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif !important;
   -webkit-font-smoothing: antialiased;
 }
+body > main { text-wrap: pretty; }
+h1, h2, h3 { text-wrap: balance; }
+.skip-link { position: fixed; left: 16px; top: 12px; z-index: 9999; padding: 10px 14px; border-radius: var(--lb-radius-sm); background: var(--lb-brand); color: #fff; font-weight: 800; transform: translateY(-160%); }
+.skip-link:focus { transform: translateY(0); }
 a { color: inherit; }
 button, input, select, textarea { font-family: inherit; }
+button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button:active, .btn:active { transform: scale(.97); }
 button, a, input, select, textarea { transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; box-shadow: var(--lb-focus); }
 .brand, .site-brand { display: inline-flex !important; align-items: center; gap: 9px; color: var(--lb-ink) !important; letter-spacing: -.045em !important; }
@@ -57,12 +64,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .brand-word { font-weight: 800; }
 .brand-word span { color: var(--lb-accent); }
 .btn, button { border-radius: var(--lb-radius-sm); font-weight: 700; }
-.primary, button:not(.ghost):not(.icon-btn):not(.close) { color: #fff !important; background: var(--lb-brand) !important; box-shadow: 0 6px 16px rgba(18,62,112,.15); }
-.primary:hover, button:not(.ghost):not(.icon-btn):not(.close):hover { background: var(--lb-accent) !important; transform: translateY(-1px); }
+.primary, button:not(.ghost):not(.icon-btn):not(.close):not(.secondary):not(.theme-switch):not(.account-toggle):not(.lb-btn):not(.lb-x):not([data-close]):not(#logout):not(#lb-theme):not(#lb-logout):not(#newDashboardClose) { color: #fff !important; background: var(--lb-brand) !important; box-shadow: 0 6px 16px rgba(18,62,112,.15); }
+.primary:hover, button:not(.ghost):not(.icon-btn):not(.close):not(.secondary):not(.theme-switch):not(.account-toggle):not(.lb-btn):not(.lb-x):not([data-close]):not(#logout):not(#lb-theme):not(#lb-logout):not(#newDashboardClose):hover { background: var(--lb-accent) !important; transform: translateY(-1px); }
 .site-primary { color: #fff !important; background: var(--lb-brand) !important; }
 .site-primary:hover { color: #fff !important; background: var(--lb-accent) !important; }
-.dark .primary, .dark button:not(.ghost):not(.icon-btn):not(.close), body.dark .site-primary { color: #fff !important; background: #1d5e86 !important; }
-.dark .primary:hover, .dark button:not(.ghost):not(.icon-btn):not(.close):hover, body.dark .site-primary:hover { color: #fff !important; background: #2678a5 !important; }
+.dark .primary, .dark button:not(.ghost):not(.icon-btn):not(.close):not(.secondary):not(.theme-switch):not(.account-toggle):not(.lb-btn):not(.lb-x):not([data-close]):not(#logout):not(#lb-theme):not(#lb-logout):not(#newDashboardClose), body.dark .site-primary { color: #fff !important; background: #1d5e86 !important; }
+.dark .primary:hover, .dark button:not(.ghost):not(.icon-btn):not(.close):not(.secondary):not(.theme-switch):not(.account-toggle):not(.lb-btn):not(.lb-x):not([data-close]):not(#logout):not(#lb-theme):not(#lb-logout):not(#newDashboardClose):hover, body.dark .site-primary:hover { color: #fff !important; background: #2678a5 !important; }
 .site-ghost { color: var(--lb-ink) !important; background: var(--lb-surface) !important; border-color: var(--lb-line) !important; }
 .ghost, button.ghost { background: var(--lb-surface) !important; color: var(--lb-ink) !important; border: 1px solid var(--lb-line) !important; box-shadow: none; }
 .ghost:hover, button.ghost:hover { background: var(--lb-surface-2) !important; border-color: var(--lb-accent) !important; }
@@ -78,6 +85,7 @@ header .primary, header .ghost { border-radius: 10px !important; }
 .account { position: relative; }
 .account-toggle { display: inline-flex; align-items: center; gap: 8px; }
 .account-menu { display: none; position: absolute; right: 0; top: calc(100% + 8px); width: 210px; padding: 8px; border: 1px solid var(--lb-line) !important; border-radius: var(--lb-radius-md); background: var(--lb-surface) !important; box-shadow: var(--lb-shadow) !important; z-index: 80; }
+.account-menu, .modal, .modal-backdrop, .intake-modal { overscroll-behavior: contain; }
 .account-menu.open { display: grid; gap: 3px; }
 .account-menu a, .account-menu button { width: 100%; min-height: 38px; display: flex; align-items: center; border: 0; border-radius: var(--lb-radius-sm); padding: 9px 10px; background: transparent !important; color: var(--lb-ink) !important; font: inherit; font-size: 13px; text-align: left; text-decoration: none; cursor: pointer; box-shadow: none !important; }
 .account-menu a:hover, .account-menu button:hover { background: var(--lb-surface-2) !important; }
@@ -87,6 +95,8 @@ header .primary, header .ghost { border-radius: 10px !important; }
 .card, .feature, .preview, .dash-card, .team-card, .panel, .profile-card, .stat, .empty, .dropzone, .comp-card, .modal-card, .modal { background: var(--lb-surface) !important; border-color: var(--lb-line) !important; box-shadow: var(--lb-shadow); }
 .feature, .dash-card, .team-card, .panel, .profile-card { border-radius: var(--lb-radius-md) !important; }
 .dash-card:hover, .team-card:hover { border-color: rgba(23,167,173,.46) !important; box-shadow: 0 16px 36px rgba(16,43,78,.13); transform: translateY(-2px); }
+.dash-card, .team-card, .member { content-visibility: auto; contain-intrinsic-size: auto 180px; }
+.stat b, .kpi-value, table { font-variant-numeric: tabular-nums; }
 .eyebrow, .notion-eyebrow { color: var(--lb-accent) !important; letter-spacing: .13em !important; }
 .upload-hero::before { content: ""; display: block; width: 56px; height: 56px; margin: 0 auto 18px; background: url('/logo.png') center / contain no-repeat; }
 .hero h1, .profile-card h1 { color: var(--lb-ink); }

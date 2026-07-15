@@ -6,6 +6,9 @@ require('dotenv').config();
 const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
+const compression = require('compression');
+const helmet = require('helmet');
+const { rateLimit } = require('express-rate-limit');
 const session = require('express-session');
 const PgSession = require('connect-pg-simple')(session);
 const bcrypt = require('bcryptjs');
@@ -15,16 +18,40 @@ const passport = require('./auth');
 const app = express();
 const isProd = process.env.NODE_ENV === 'production';
 const PUB = path.join(__dirname, 'public');
+const sessionSecret = process.env.SESSION_SECRET || 'troque-este-segredo-em-producao';
+let publicDashboardsCache = { rows: null, expiresAt: 0 };
+
+if (isProd && sessionSecret === 'troque-este-segredo-em-producao') {
+  throw new Error('SESSION_SECRET precisa ser configurado em produção.');
+}
 
 // Render/Neon ficam atrás de proxy; necessário para cookies 'secure'.
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
 
-app.use(express.json({ limit: '35mb' }));
-app.use(express.urlencoded({ extended: true, limit: '35mb' }));
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+app.use(compression({ threshold: 1024 }));
+app.use('/api/dashboards', express.json({ limit: '25mb' }));
+app.use('/api/profile', express.json({ limit: '3mb' }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '256kb' }));
+
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/auth/')) res.set('Cache-Control', 'no-store');
+  next();
+});
+
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-7', legacyHeaders: false });
+const aiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 12, standardHeaders: 'draft-7', legacyHeaders: false });
+const publishLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 90, standardHeaders: 'draft-7', legacyHeaders: false });
+app.use(['/auth/login', '/auth/signup'], authLimiter);
+app.use('/api/ai', aiLimiter);
+app.use('/api/dashboards', (req, res, next) => req.method === 'GET' ? next() : publishLimiter(req, res, next));
 
 app.use(session({
-  store: new PgSession({ pool, tableName: 'session', createTableIfMissing: true }),
-  secret: process.env.SESSION_SECRET || 'troque-este-segredo-em-producao',
+  store: new PgSession({ pool, tableName: 'session', createTableIfMissing: true, pruneSessionInterval: 15 * 60 }),
+  secret: sessionSecret,
+  name: 'litebi.sid',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -37,6 +64,15 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+app.get('/healthz', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ ok: true });
+  } catch (_) {
+    res.status(503).json({ ok: false });
+  }
+});
+
 // ---------- Helpers ----------
 function requireAuth(req, res, next) {
   if (req.isAuthenticated && req.isAuthenticated()) return next();
@@ -46,8 +82,23 @@ function requireAuth(req, res, next) {
   return res.status(401).json({ error: 'Não autenticado.' });
 }
 function slugId() { return crypto.randomBytes(6).toString('base64url'); }
+function invalidatePublicDashboards() { publicDashboardsCache = { rows: null, expiresAt: 0 }; }
+function safeNext(value, fallback = '/dashboards') {
+  const next = String(value || '');
+  return next.startsWith('/') && !next.startsWith('//') && !next.includes('\\') ? next : fallback;
+}
+function validateDashboardPayload(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return 'Estado do dashboard ausente.';
+  if (payload.components && (!Array.isArray(payload.components) || payload.components.length > 150)) return 'O dashboard excede o limite de 150 componentes.';
+  if (payload.rows && (!Array.isArray(payload.rows) || payload.rows.length > 100000)) return 'A base excede o limite de 100.000 linhas.';
+  const bytes = Buffer.byteLength(JSON.stringify(payload));
+  return bytes > 12 * 1024 * 1024 ? 'Dashboard muito grande (limite ~12MB).' : null;
+}
 function publicUser(u) {
   return u ? { id: u.id, email: u.email, name: u.name, avatar_url: u.avatar_url, bio: u.bio || '' } : null;
+}
+function publicProfileUser(u) {
+  return u ? { id: u.id, name: u.name, avatar_url: u.avatar_url, bio: u.bio || '' } : null;
 }
 async function dashboardAccess(userId, dashboardId) {
   const { rows } = await pool.query(`
@@ -84,8 +135,6 @@ app.post('/auth/signup', async (req, res, next) => {
     const name = String(req.body.name || '').trim() || (email ? email.split('@')[0] : '');
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: 'E-mail inválido.' });
     if (password.length < 6) return res.status(400).json({ error: 'A senha deve ter ao menos 6 caracteres.' });
-    const exists = await pool.query('SELECT 1 FROM users WHERE email = $1', [email]);
-    if (exists.rowCount) return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
     const hash = await bcrypt.hash(password, 12);
     const { rows } = await pool.query(
       'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING *',
@@ -95,7 +144,10 @@ app.post('/auth/signup', async (req, res, next) => {
       if (err) return next(err);
       res.json({ ok: true, user: publicUser(rows[0]) });
     });
-  } catch (e) { next(e); }
+  } catch (e) {
+    if (e && e.code === '23505') return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
+    next(e);
+  }
 });
 
 app.post('/auth/login', (req, res, next) => {
@@ -112,13 +164,17 @@ app.post('/auth/login', (req, res, next) => {
 app.post('/auth/logout', (req, res, next) => {
   req.logout((err) => {
     if (err) return next(err);
-    res.json({ ok: true });
+    req.session.destroy((sessionError) => {
+      if (sessionError) return next(sessionError);
+      res.clearCookie('litebi.sid');
+      res.json({ ok: true });
+    });
   });
 });
 
 app.get('/auth/google', (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID) return res.status(404).send('Login com Google não configurado.');
-  if (req.query.next) req.session.next = String(req.query.next);
+  if (req.query.next) req.session.next = safeNext(req.query.next);
   passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
 });
 
@@ -128,7 +184,7 @@ app.get('/auth/google/callback', (req, res, next) => {
     req.login(user, (e) => {
       if (e) return res.redirect('/login?error=google');
       const next = req.session.next; delete req.session.next;
-      res.redirect(next || '/dashboards');
+      res.redirect(safeNext(next));
     });
   })(req, res, next);
 });
@@ -164,21 +220,31 @@ app.patch('/api/profile', requireAuth, async (req, res, next) => {
 app.delete('/api/account', requireAuth, async (req, res, next) => {
   try {
     await pool.query('DELETE FROM users WHERE id = $1', [req.user.id]);
-    req.logout((err) => { if (err) return next(err); res.json({ ok: true }); });
+    req.logout((err) => {
+      if (err) return next(err);
+      req.session.destroy((sessionError) => {
+        if (sessionError) return next(sessionError);
+        res.clearCookie('litebi.sid');
+        res.json({ ok: true });
+      });
+    });
   } catch (e) { next(e); }
 });
 
 app.get('/api/profile/:id', requireAuth, async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const user = (await pool.query('SELECT id, name, email, avatar_url, bio, created_at FROM users WHERE id = $1', [id])).rows[0];
+    if (!id) return res.status(400).json({ error: 'Perfil inválido.' });
+    const [userResult, dashboardsResult, relationResult] = await Promise.all([
+      pool.query('SELECT id, name, email, avatar_url, bio, created_at FROM users WHERE id = $1', [id]),
+      pool.query(`SELECT id, slug, title, views, updated_at FROM dashboards WHERE user_id = $1 AND visibility = 'public' ORDER BY updated_at DESC`, [id]),
+      pool.query(`SELECT id, requester_id, addressee_id, status FROM friendships
+        WHERE (requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1)
+        ORDER BY id DESC LIMIT 1`, [req.user.id, id]),
+    ]);
+    const user = userResult.rows[0];
     if (!user) return res.status(404).json({ error: 'Perfil não encontrado.' });
-    const dashboards = (await pool.query(`SELECT id, slug, title, views, updated_at FROM dashboards
-      WHERE user_id = $1 AND visibility = 'public' ORDER BY updated_at DESC`, [id])).rows;
-    const relation = (await pool.query(`SELECT id, requester_id, addressee_id, status FROM friendships
-      WHERE (requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1)
-      ORDER BY id DESC LIMIT 1`, [req.user.id, id])).rows[0] || null;
-    res.json({ profile: Object.assign(publicUser(user), { created_at: user.created_at }), dashboards, friendship: relation });
+    res.json({ profile: Object.assign(publicUser(user), { created_at: user.created_at }), dashboards: dashboardsResult.rows, friendship: relationResult.rows[0] || null });
   } catch (e) { next(e); }
 });
 
@@ -186,17 +252,20 @@ app.get('/api/profile/:id', requireAuth, async (req, res, next) => {
 app.get('/api/public/profile/:id', async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const user = (await pool.query('SELECT id, name, email, avatar_url, bio, created_at FROM users WHERE id = $1', [id])).rows[0];
+    if (!id) return res.status(400).json({ error: 'Perfil inválido.' });
+    const relationPromise = req.user && req.user.id !== id
+      ? pool.query(`SELECT id, requester_id, addressee_id, status FROM friendships
+          WHERE (requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1)
+          ORDER BY id DESC LIMIT 1`, [req.user.id, id])
+      : Promise.resolve({ rows: [] });
+    const [userResult, dashboardsResult, relationResult] = await Promise.all([
+      pool.query('SELECT id, name, email, avatar_url, bio, created_at FROM users WHERE id = $1', [id]),
+      pool.query(`SELECT id, slug, title, views, updated_at FROM dashboards WHERE user_id = $1 AND visibility = 'public' ORDER BY updated_at DESC`, [id]),
+      relationPromise,
+    ]);
+    const user = userResult.rows[0];
     if (!user) return res.status(404).json({ error: 'Perfil não encontrado.' });
-    const dashboards = (await pool.query(`SELECT id, slug, title, views, updated_at FROM dashboards
-      WHERE user_id = $1 AND visibility = 'public' ORDER BY updated_at DESC`, [id])).rows;
-    let friendship = null;
-    if (req.user && req.user.id !== id) {
-      friendship = (await pool.query(`SELECT id, requester_id, addressee_id, status FROM friendships
-        WHERE (requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1)
-        ORDER BY id DESC LIMIT 1`, [req.user.id, id])).rows[0] || null;
-    }
-    res.json({ profile: Object.assign(publicUser(user), { created_at: user.created_at }), dashboards, friendship });
+    res.json({ profile: Object.assign(publicProfileUser(user), { created_at: user.created_at }), dashboards: dashboardsResult.rows, friendship: relationResult.rows[0] || null });
   } catch (e) { next(e); }
 });
 
@@ -366,7 +435,11 @@ app.post('/api/ai/dashboard', requireAuth, async (req, res, next) => {
         distinct: Number(c.distinct) || 0,
         fill: Number(c.fill) || 0,
       })),
-      sample: Array.isArray(input.sample) ? input.sample.slice(0, 3) : [],
+      sample: Array.isArray(input.sample) ? input.sample.slice(0, 3).map((row) => {
+        const clean = {};
+        Object.entries(row && typeof row === 'object' ? row : {}).slice(0, 30).forEach(([key, value]) => { clean[String(key).slice(0, 80)] = String(value == null ? '' : value).slice(0, 120); });
+        return clean;
+      }) : [],
     };
     const fileDescription = String(input.description || '').trim();
     if (fileDescription) compact.description = fileDescription.slice(0, 500);
@@ -449,7 +522,8 @@ app.post('/api/ai/dashboard', requireAuth, async (req, res, next) => {
 app.post('/api/dashboards', requireAuth, async (req, res, next) => {
   try {
     const { title, visibility, payload, html } = req.body || {};
-    if (!payload || typeof payload !== 'object') return res.status(400).json({ error: 'Estado do dashboard ausente.' });
+    const payloadError = validateDashboardPayload(payload);
+    if (payloadError) return res.status(payloadError.includes('grande') ? 413 : 400).json({ error: payloadError });
     if (!html || typeof html !== 'string') return res.status(400).json({ error: 'HTML do dashboard ausente.' });
     if (html.length > 12 * 1024 * 1024) return res.status(413).json({ error: 'Dashboard muito grande (limite ~12MB).' });
     const vis = visibility === 'public' ? 'public' : 'private';
@@ -459,6 +533,7 @@ app.post('/api/dashboards', requireAuth, async (req, res, next) => {
       'INSERT INTO dashboards (slug, user_id, title, visibility, payload, html) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, slug, title, visibility, created_at',
       [slug, req.user.id, t, vis, payload, html]
     );
+    invalidatePublicDashboards();
     res.json({ ok: true, dashboard: rows[0], url: '/d/' + slug });
   } catch (e) { next(e); }
 });
@@ -466,13 +541,17 @@ app.post('/api/dashboards', requireAuth, async (req, res, next) => {
 app.get('/api/dashboards', requireAuth, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT DISTINCT d.id, d.slug, d.title, d.visibility, d.views, d.created_at, d.updated_at,
+      `SELECT d.id, d.slug, d.title, d.visibility, d.views, d.created_at, d.updated_at,
         u.name AS owner_name, u.email AS owner_email,
-        CASE WHEN d.user_id = $1 THEN 'owner' ELSE COALESCE(ds.permission, 'viewer') END AS access
+        CASE WHEN d.user_id = $1 THEN 'owner' ELSE shared.access END AS access
        FROM dashboards d JOIN users u ON u.id = d.user_id
-       LEFT JOIN dashboard_shares ds ON ds.dashboard_id = d.id
-       LEFT JOIN team_members tm ON tm.team_id = ds.team_id AND tm.user_id = $1
-       WHERE d.user_id = $1 OR tm.user_id = $1 ORDER BY d.updated_at DESC`,
+       LEFT JOIN LATERAL (
+         SELECT CASE WHEN count(*) = 0 THEN NULL WHEN bool_or(ds.permission = 'editor') THEN 'editor' ELSE 'viewer' END AS access
+         FROM dashboard_shares ds
+         JOIN team_members tm ON tm.team_id = ds.team_id AND tm.user_id = $1
+         WHERE ds.dashboard_id = d.id
+       ) shared ON true
+       WHERE d.user_id = $1 OR shared.access IS NOT NULL ORDER BY d.updated_at DESC`,
       [req.user.id]
     );
     res.json({ dashboards: rows });
@@ -481,11 +560,15 @@ app.get('/api/dashboards', requireAuth, async (req, res, next) => {
 
 app.get('/api/public/dashboards', async (req, res, next) => {
   try {
+    if (publicDashboardsCache.rows && publicDashboardsCache.expiresAt > Date.now()) {
+      return res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=120').json({ dashboards: publicDashboardsCache.rows });
+    }
     const { rows } = await pool.query(`SELECT d.id, d.slug, d.title, d.views, d.updated_at,
       u.id AS owner_id, u.name AS owner_name, u.avatar_url
       FROM dashboards d JOIN users u ON u.id = d.user_id
       WHERE d.visibility = 'public' ORDER BY d.updated_at DESC LIMIT 100`);
-    res.json({ dashboards: rows });
+    publicDashboardsCache = { rows, expiresAt: Date.now() + 30000 };
+    res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=120').json({ dashboards: rows });
   } catch (e) { next(e); }
 });
 
@@ -539,9 +622,14 @@ app.patch('/api/dashboards/:id', requireAuth, async (req, res, next) => {
     const id = parseInt(req.params.id, 10), access = await dashboardAccess(req.user.id, id);
     if (!access || !['owner', 'editor'].includes(access.permission)) return res.status(403).json({ error: 'Você só pode editar dashboards com permissão de editor.' });
     const sets = []; const vals = []; let i = 1;
+    if (req.body.visibility && access.permission !== 'owner') return res.status(403).json({ error: 'Somente o dono pode alterar a visibilidade.' });
     if (req.body.visibility) { sets.push('visibility = $' + (i++)); vals.push(req.body.visibility === 'public' ? 'public' : 'private'); }
     if (req.body.title) { sets.push('title = $' + (i++)); vals.push(String(req.body.title).slice(0, 200)); }
-    if (req.body.payload && typeof req.body.payload === 'object') { sets.push('payload = $' + (i++)); vals.push(req.body.payload); }
+    if (req.body.payload) {
+      const payloadError = validateDashboardPayload(req.body.payload);
+      if (payloadError) return res.status(payloadError.includes('grande') ? 413 : 400).json({ error: payloadError });
+      sets.push('payload = $' + (i++)); vals.push(req.body.payload);
+    }
     if (typeof req.body.html === 'string') {
       if (req.body.html.length > 12 * 1024 * 1024) return res.status(413).json({ error: 'Dashboard muito grande (limite ~12MB).' });
       sets.push('html = $' + (i++)); vals.push(req.body.html);
@@ -554,6 +642,7 @@ app.patch('/api/dashboards/:id', requireAuth, async (req, res, next) => {
       vals
     );
     if (!rowCount) return res.status(404).json({ error: 'Dashboard não encontrado.' });
+    invalidatePublicDashboards();
     res.json({ ok: true, dashboard: rows[0] });
   } catch (e) { next(e); }
 });
@@ -565,6 +654,7 @@ app.delete('/api/dashboards/:id', requireAuth, async (req, res, next) => {
     if (!access || access.permission !== 'owner') return res.status(403).json({ error: 'Somente o dono pode excluir.' });
     const { rowCount } = await pool.query('DELETE FROM dashboards WHERE id = $1 AND user_id = $2', [id, req.user.id]);
     if (!rowCount) return res.status(404).json({ error: 'Dashboard não encontrado.' });
+    invalidatePublicDashboards();
     res.json({ ok: true });
   } catch (e) { next(e); }
 });
@@ -572,18 +662,20 @@ app.delete('/api/dashboards/:id', requireAuth, async (req, res, next) => {
 // ---------- Viewer público/privado ----------
 app.get('/d/:slug', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM dashboards WHERE slug = $1', [req.params.slug]);
+    const { rows } = await pool.query('SELECT id, user_id, visibility, html FROM dashboards WHERE slug = $1', [req.params.slug]);
     const d = rows[0];
     if (!d) return res.status(404).send(errorPage('Dashboard não encontrado.'));
     if (d.visibility !== 'public') {
       const uid = req.user && req.user.id;
-      if (uid !== d.user_id) {
-        if (!req.user) return res.redirect('/login?next=' + encodeURIComponent('/d/' + req.params.slug));
-        return res.status(403).send(errorPage('Este dashboard é privado.'));
-      }
+      if (!uid) return res.redirect('/login?next=' + encodeURIComponent('/d/' + req.params.slug));
+      if (uid !== d.user_id && !(await dashboardAccess(uid, d.id))) return res.status(403).send(errorPage('Este dashboard é privado.'));
     }
     pool.query('UPDATE dashboards SET views = views + 1 WHERE id = $1', [d.id]).catch(() => {});
-    res.set('Content-Type', 'text/html; charset=utf-8').send(d.html);
+    res.set({
+      'Content-Type': 'text/html; charset=utf-8',
+      'Content-Security-Policy': "sandbox allow-scripts allow-downloads; default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: blob: https:; font-src data: https:; connect-src 'none'",
+      'Cache-Control': d.visibility === 'public' ? 'public, max-age=60, stale-while-revalidate=300' : 'private, no-store',
+    }).send(d.html);
   } catch (e) { next(e); }
 });
 
@@ -601,7 +693,7 @@ app.get('/terms', (req, res) => res.sendFile(path.join(PUB, 'termos.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(PUB, 'privacidade.html')));
 app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, 'logo.png')));
 // Arquivos estáticos (cloud.js, base-exemplo.csv, etc.)
-app.use(express.static(PUB));
+app.use(express.static(PUB, { etag: true, lastModified: true, maxAge: isProd ? '1d' : 0 }));
 
 // 404
 app.use((req, res) => {
@@ -613,10 +705,27 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error('[LiteBI] Erro:', err);
   if (res.headersSent) return next(err);
-  res.status(500).json({ error: 'Erro interno do servidor.' });
+  if (err.type === 'entity.too.large') return res.status(413).json({ error: 'Conteúdo enviado excede o limite permitido.' });
+  if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'JSON inválido.' });
+  res.status(err.status && err.status < 500 ? err.status : 500).json({ error: 'Erro interno do servidor.' });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
+let httpServer;
 init()
-  .then(() => app.listen(PORT, () => console.log('[LiteBI] Servidor no ar na porta ' + PORT)))
+  .then(() => {
+    httpServer = app.listen(PORT, () => console.log('[LiteBI] Servidor no ar na porta ' + PORT));
+    httpServer.keepAliveTimeout = 65000;
+    httpServer.headersTimeout = 66000;
+  })
   .catch((e) => { console.error('[LiteBI] Falha ao iniciar o banco:', e); process.exit(1); });
+
+function shutdown(signal) {
+  console.log('[LiteBI] Encerrando após ' + signal + '…');
+  const force = setTimeout(() => process.exit(1), 10000);
+  force.unref();
+  if (!httpServer) return pool.end().finally(() => process.exit(0));
+  httpServer.close(() => pool.end().finally(() => process.exit(0)));
+}
+process.once('SIGTERM', () => shutdown('SIGTERM'));
+process.once('SIGINT', () => shutdown('SIGINT'));
