@@ -1840,25 +1840,38 @@ button:disabled { opacity: .6; cursor: wait; }
     state.theme = Object.assign({}, state.theme, { title: $('#expTitle').value.trim() || 'Meu Dashboard', subtitle: $('#expSubtitle').value.trim(), color1: $('#expC1').value, color2: $('#expC2').value, fontFamily: $('#expFont').value || 'DM Sans' });
     save(); refreshAll(); closeModal('exportModal');
   }
-  function doExport() {
-    if (!state.components.length) { alert('Adicione ao menos um componente antes de exportar.'); return; }
-    const theme = Object.assign({}, DEFAULT_THEME, state.theme || {});
-    const html = buildExportHtml(theme);
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = (theme.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-|-$/g, '') || 'dashboard') + '.html';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  let litebiLogoDataPromise;
+  function getLitebiLogoData() {
+    if (!litebiLogoDataPromise) {
+      litebiLogoDataPromise = fetch('/logo.png', { credentials: 'same-origin' })
+        .then(response => { if (!response.ok) throw new Error('Logo indisponível.'); return response.blob(); })
+        .then(blob => new Promise((resolve, reject) => {
+          const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(blob);
+        }));
+    }
+    return litebiLogoDataPromise;
   }
-  function buildExportHtml(theme) {
+  async function doExport() {
+    if (!state.components.length) { alert('Adicione ao menos um componente antes de exportar.'); return; }
+    try {
+      const theme = Object.assign({}, DEFAULT_THEME, state.theme || {});
+      const html = buildExportHtml(theme, await getLitebiLogoData());
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (theme.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-|-$/g, '') || 'dashboard') + '.html';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    } catch (_) { alert('Não foi possível preparar o arquivo para exportação. Tente novamente.'); }
+  }
+  function buildExportHtml(theme, brandLogo) {
     const appUrl = location.origin;
-    const payload = { columns: state.columns, rows: state.rows, components: state.components, filters: state.filters, theme, meta: state.meta, appUrl };
+    const payload = { columns: state.columns, rows: state.rows, components: state.components, filters: state.filters, theme, meta: state.meta, appUrl, brandLogo };
     const data = JSON.stringify(payload).replace(/</g, '\\u003c');
     const runtime = LITEBI_RUNTIME.toString();
     return '<!DOCTYPE html>\n<html lang="pt-BR"><head><meta charset="UTF-8">' +
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
-      '<link rel="icon" type="image/png" href="' + esc(appUrl + '/logo.png') + '">' +
+      '<link rel="icon" type="image/png" href="' + esc(brandLogo || appUrl + '/logo.png') + '">' +
       '<title>' + esc(theme.title) + '</title>' +
       '<script data-cfasync="false" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>' +
       '<style>' + EXPORT_CSS + '</style></head><body>' +
@@ -1896,7 +1909,7 @@ button:disabled { opacity: .6; cursor: wait; }
   // ---------- Runtime self-contained do dashboard exportado ----------
   function LITEBI_RUNTIME() {
     var D = window.__LITEBI__ || {};
-    var cols = D.columns || [], rows = D.rows || [], comps = D.components || [], filters = D.filters || [], theme = D.theme || {}, meta = D.meta || {}, appUrl = D.appUrl || '/';
+    var cols = D.columns || [], rows = D.rows || [], comps = D.components || [], filters = D.filters || [], theme = D.theme || {}, meta = D.meta || {}, appUrl = D.appUrl || '/', brandLogo = D.brandLogo || (appUrl.replace(/\/$/, '') + '/logo.png');
     var c1 = theme.color1 || '#5e9fe8', c2 = theme.color2 || '#72bc8f';
     document.body.style.fontFamily = theme.fontFamily || 'DM Sans';
     document.documentElement.style.setProperty('--c1', c1);
@@ -1920,7 +1933,7 @@ button:disabled { opacity: .6; cursor: wait; }
     var root = document.getElementById('dash-root');
     var when = meta.uploadDate ? new Date(meta.uploadDate).toLocaleDateString('pt-BR') : '';
     var logo = theme.logoData ? '<img class="dash-logo" src="' + esc(theme.logoData) + '" width="44" height="44" alt="Logo da empresa">' : '';
-    root.innerHTML = '<div class="dash-header"><a class="litebi-home" data-litebi-home href="' + esc(appUrl) + '" target="_blank" rel="noopener" aria-label="Ir para o LiteBI"><img src="' + esc(appUrl + '/logo.png') + '" width="27" height="27" alt=""></a>' + logo + '<span class="eyebrow">LITEBI · ANALYTICS</span><h1>' + esc(theme.title) + '</h1>' + (theme.subtitle ? '<h2>' + esc(theme.subtitle) + '</h2>' : '') + '<p>Gerado pelo LiteBI' + (meta.fileName ? ' \u00b7 fonte: ' + esc(meta.fileName) : '') + ' \u00b7 ' + new Date().toLocaleString('pt-BR') + '</p></div><div class="board" id="board"></div><div class="foot">' + (meta.rowCount || rows.length) + ' registros analisados.</div>';
+    root.innerHTML = '<div class="dash-header"><a class="litebi-home" data-litebi-home href="' + esc(appUrl) + '" target="_blank" rel="noopener noreferrer" aria-label="Ir para o LiteBI" title="Ir para o LiteBI"><img src="' + esc(brandLogo) + '" width="28" height="28" alt=""></a>' + logo + '<span class="eyebrow">LITEBI · ANALYTICS</span><h1>' + esc(theme.title) + '</h1>' + (theme.subtitle ? '<h2>' + esc(theme.subtitle) + '</h2>' : '') + '<p>Gerado pelo LiteBI' + (meta.fileName ? ' \u00b7 fonte: ' + esc(meta.fileName) : '') + ' \u00b7 ' + new Date().toLocaleString('pt-BR') + '</p></div><div class="board" id="board"></div><div class="foot">' + (meta.rowCount || rows.length) + ' registros analisados.</div>';
     var board = document.getElementById('board');
 
     comps.forEach(function (comp) {
@@ -2045,7 +2058,7 @@ button:disabled { opacity: .6; cursor: wait; }
   // Ponte para a camada de conta/publicação (cloud.js).
   window.__litebiBridge = {
     getState: function () { try { return JSON.parse(JSON.stringify(state)); } catch (e) { return null; } },
-    getExportHtml: function () { try { return buildExportHtml(state.theme || DEFAULT_THEME); } catch (e) { return null; } },
+    getExportHtml: async function () { try { return buildExportHtml(state.theme || DEFAULT_THEME, await getLitebiLogoData()); } catch (e) { return null; } },
     hasComponents: function () { return !!(state.components && state.components.length); },
     getTitle: function () { return (state.theme && state.theme.title) || 'Meu Dashboard'; }
     ,getCloudId: function () { return window.__litebiCloudDashboardId || null; }

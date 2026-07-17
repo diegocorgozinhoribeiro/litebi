@@ -171,10 +171,10 @@
   document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && modal.classList.contains('open')) closePublish(); });
   window.__litebiPublish = openPublish;
 
-  modal.querySelector('#lb-save').onclick = function () {
+  modal.querySelector('#lb-save').onclick = async function () {
     var b = window.__litebiBridge;
     var payload = b && b.getState && b.getState();
-    var html = b && b.getExportHtml && b.getExportHtml();
+    var html = b && b.getExportHtml && await b.getExportHtml();
     if (!payload || !html) { setMsg('Não foi possível ler o dashboard atual.', 'err'); return; }
     var title = modal.querySelector('#lb-title').value.trim() || 'Meu Dashboard';
     var visibility = modal.querySelector('input[name=lbvis]:checked').value;

@@ -3,6 +3,7 @@
  * server.js — LiteBI: login + publicação/hospedagem de dashboards.
  */
 require('dotenv').config();
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
@@ -19,6 +20,7 @@ const LEGAL = require('./legal');
 const app = express();
 const isProd = process.env.NODE_ENV === 'production';
 const PUB = path.join(__dirname, 'public');
+const logoDataUri = 'data:image/png;base64,' + fs.readFileSync(path.join(__dirname, 'logo.png')).toString('base64');
 const sessionSecret = process.env.SESSION_SECRET || 'troque-este-segredo-em-producao';
 let publicDashboardsCache = { rows: null, expiresAt: 0 };
 
@@ -84,13 +86,22 @@ function requireAuth(req, res, next) {
 }
 function slugId() { return crypto.randomBytes(6).toString('base64url'); }
 function invalidatePublicDashboards() { publicDashboardsCache = { rows: null, expiresAt: 0 }; }
-function protectDashboardScripts(html) {
+function escapeHtmlAttribute(value) {
+  return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+}
+function protectDashboardScripts(html, appUrl) {
   let output = String(html || '').replace(/<script\b(?![^>]*\bdata-cfasync=)/gi, '<script data-cfasync="false"');
-  if (!/<link\b[^>]*rel=["'](?:shortcut )?icon["']/i.test(output)) {
-    output = output.replace(/<\/head>/i, '<link rel="icon" type="image/png" href="/logo.png"></head>');
+  const safeAppUrl = escapeHtmlAttribute(String(appUrl || '').replace(/\/$/, ''));
+  const favicon = '<link rel="icon" type="image/png" href="' + logoDataUri + '">';
+  const homeLink = '<a data-litebi-home href="' + safeAppUrl + '/" target="_blank" rel="noopener noreferrer" aria-label="Ir para o LiteBI" title="Ir para o LiteBI" style="position:fixed;z-index:9999;top:18px;right:18px;width:44px;height:44px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.35);border-radius:12px;background:rgba(15,36,57,.82);box-shadow:0 8px 24px rgba(0,0,0,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)"><img src="' + logoDataUri + '" width="28" height="28" alt="" style="display:block;width:28px;height:28px;object-fit:contain"></a>';
+  if (/<link\b[^>]*rel=["'](?:shortcut )?icon["'][^>]*>/i.test(output)) {
+    output = output.replace(/<link\b[^>]*rel=["'](?:shortcut )?icon["'][^>]*>/i, favicon);
+  } else {
+    output = output.replace(/<\/head>/i, favicon + '</head>');
   }
-  if (!/data-litebi-home/i.test(output)) {
-    const homeLink = '<a data-litebi-home href="/" target="_blank" rel="noopener" aria-label="Ir para o LiteBI" style="position:fixed;z-index:9999;top:18px;right:18px;width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.35);border-radius:12px;background:rgba(15,36,57,.72);box-shadow:0 8px 24px rgba(0,0,0,.18);backdrop-filter:blur(8px)"><img src="/logo.png" width="27" height="27" alt=""></a>';
+  if (/<a\b[^>]*data-litebi-home[^>]*>[\s\S]*?<\/a>/i.test(output)) {
+    output = output.replace(/<a\b[^>]*data-litebi-home[^>]*>[\s\S]*?<\/a>/i, homeLink);
+  } else {
     output = output.replace(/<body([^>]*)>/i, '<body$1>' + homeLink);
   }
   return output;
@@ -698,11 +709,12 @@ app.get('/d/:slug', async (req, res, next) => {
       if (uid !== d.user_id && !(await dashboardAccess(uid, d.id))) return res.status(403).send(errorPage('Este dashboard é privado.'));
     }
     pool.query('UPDATE dashboards SET views = views + 1 WHERE id = $1', [d.id]).catch(() => {});
+    const requestBaseUrl = req.protocol + '://' + req.get('host');
     res.set({
       'Content-Type': 'text/html; charset=utf-8',
-      'Content-Security-Policy': "sandbox allow-scripts allow-downloads; default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: blob: https:; font-src data: https:; connect-src 'none'",
+      'Content-Security-Policy': "sandbox allow-scripts allow-downloads allow-popups allow-popups-to-escape-sandbox; default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: blob: https:; font-src data: https:; connect-src 'none'",
       'Cache-Control': d.visibility === 'public' ? 'public, max-age=60, stale-while-revalidate=300, no-transform' : 'private, no-store, no-transform',
-    }).send(protectDashboardScripts(d.html));
+    }).send(protectDashboardScripts(d.html, requestBaseUrl));
   } catch (e) { next(e); }
 });
 
