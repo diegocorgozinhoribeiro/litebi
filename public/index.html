@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LiteBI — Dashboards a partir de planilhas</title><link rel="stylesheet" href="/app.css"><script src="/theme.js"></script>
+<title>LiteBI — Dashboards a partir de planilhas</title><link rel="icon" type="image/png" href="/logo.png"><link rel="stylesheet" href="/app.css"><script src="/theme.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
@@ -1852,11 +1852,13 @@ button:disabled { opacity: .6; cursor: wait; }
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
   function buildExportHtml(theme) {
-    const payload = { columns: state.columns, rows: state.rows, components: state.components, filters: state.filters, theme, meta: state.meta };
+    const appUrl = location.origin;
+    const payload = { columns: state.columns, rows: state.rows, components: state.components, filters: state.filters, theme, meta: state.meta, appUrl };
     const data = JSON.stringify(payload).replace(/</g, '\\u003c');
     const runtime = LITEBI_RUNTIME.toString();
     return '<!DOCTYPE html>\n<html lang="pt-BR"><head><meta charset="UTF-8">' +
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+      '<link rel="icon" type="image/png" href="' + esc(appUrl + '/logo.png') + '">' +
       '<title>' + esc(theme.title) + '</title>' +
       '<script data-cfasync="false" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>' +
       '<style>' + EXPORT_CSS + '</style></head><body>' +
@@ -1870,6 +1872,7 @@ button:disabled { opacity: .6; cursor: wait; }
   const EXPORT_CSS = ':root{--c1:#5e9fe8;--c2:#72bc8f;--bg:#f4f6f9;--surface:#fff;--surface-soft:#f8fafc;--text:#172033;--soft:#667085;--muted:#98a2b3;--border:#e7ebf0;--shadow:0 8px 24px rgba(16,24,40,.06)}' +
     '*{box-sizing:border-box}html{background:var(--bg)}body{margin:0;background:radial-gradient(circle at 0 0,rgba(94,159,232,.08),transparent 34rem),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}' +
     '.dash-header{position:relative;overflow:hidden;padding:52px max(28px,calc((100% - 1240px)/2));color:#fff;background:linear-gradient(120deg,var(--c1),var(--c2));box-shadow:0 10px 30px rgba(27,64,102,.15)}' +
+    '.litebi-home{position:absolute;z-index:3;top:24px;right:max(24px,calc((100% - 1240px)/2));width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.28);border-radius:12px;background:rgba(255,255,255,.14);backdrop-filter:blur(8px);transition:transform .16s ease,background-color .16s ease}.litebi-home:hover{transform:translateY(-2px);background:rgba(255,255,255,.24)}.litebi-home:focus-visible{outline:3px solid rgba(255,255,255,.5);outline-offset:2px}.litebi-home img{width:27px;height:27px;object-fit:contain}' +
     '.dash-logo{position:relative;z-index:1;display:block;width:auto;height:42px;max-width:180px;object-fit:contain;object-position:left center;margin-bottom:20px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.12))}' +
     '.dash-header:after{content:"";position:absolute;width:340px;height:340px;right:-90px;top:-180px;border:1px solid rgba(255,255,255,.22);border-radius:50%;box-shadow:0 0 0 34px rgba(255,255,255,.06),0 0 0 70px rgba(255,255,255,.04)}' +
     '.dash-header .eyebrow{position:relative;z-index:1;display:block;margin-bottom:12px;font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;opacity:.78}' +
@@ -1887,13 +1890,13 @@ button:disabled { opacity: .6; cursor: wait; }
     '.kpi-s{font-size:11px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
     'table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}th{position:sticky;top:0;background:var(--surface-soft);color:var(--soft);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;z-index:1}tbody tr:hover{background:#f8fbff}tbody tr:last-child td{border-bottom:0}' +
     '.foot{max-width:1280px;margin:0 auto;padding:0 20px 38px;color:var(--muted);font-size:11px;text-align:right}' +
-    '@media(max-width:760px){.dash-header{padding:36px 22px}.board{grid-template-columns:1fr;grid-auto-rows:190px;gap:12px;padding:18px 14px 38px}.cell{grid-column:1/-1!important;grid-row:auto!important;min-height:190px}.cell-body{padding:14px}.foot{padding:0 14px 28px}}' +
+    '@media(max-width:760px){.dash-header{padding:76px 22px 36px}.litebi-home{top:18px;right:18px}.board{grid-template-columns:1fr;grid-auto-rows:190px;gap:12px;padding:18px 14px 38px}.cell{grid-column:1/-1!important;grid-row:auto!important;min-height:190px}.cell-body{padding:14px}.foot{padding:0 14px 28px}}' +
     '@media(prefers-reduced-motion:reduce){.cell{transition:none}.cell:hover{transform:none}}';
 
   // ---------- Runtime self-contained do dashboard exportado ----------
   function LITEBI_RUNTIME() {
     var D = window.__LITEBI__ || {};
-    var cols = D.columns || [], rows = D.rows || [], comps = D.components || [], filters = D.filters || [], theme = D.theme || {}, meta = D.meta || {};
+    var cols = D.columns || [], rows = D.rows || [], comps = D.components || [], filters = D.filters || [], theme = D.theme || {}, meta = D.meta || {}, appUrl = D.appUrl || '/';
     var c1 = theme.color1 || '#5e9fe8', c2 = theme.color2 || '#72bc8f';
     document.body.style.fontFamily = theme.fontFamily || 'DM Sans';
     document.documentElement.style.setProperty('--c1', c1);
@@ -1917,7 +1920,7 @@ button:disabled { opacity: .6; cursor: wait; }
     var root = document.getElementById('dash-root');
     var when = meta.uploadDate ? new Date(meta.uploadDate).toLocaleDateString('pt-BR') : '';
     var logo = theme.logoData ? '<img class="dash-logo" src="' + esc(theme.logoData) + '" width="44" height="44" alt="Logo da empresa">' : '';
-    root.innerHTML = '<div class="dash-header">' + logo + '<span class="eyebrow">LITEBI · ANALYTICS</span><h1>' + esc(theme.title) + '</h1>' + (theme.subtitle ? '<h2>' + esc(theme.subtitle) + '</h2>' : '') + '<p>Gerado pelo LiteBI' + (meta.fileName ? ' \u00b7 fonte: ' + esc(meta.fileName) : '') + ' \u00b7 ' + new Date().toLocaleString('pt-BR') + '</p></div><div class="board" id="board"></div><div class="foot">' + (meta.rowCount || rows.length) + ' registros analisados.</div>';
+    root.innerHTML = '<div class="dash-header"><a class="litebi-home" data-litebi-home href="' + esc(appUrl) + '" target="_blank" rel="noopener" aria-label="Ir para o LiteBI"><img src="' + esc(appUrl + '/logo.png') + '" width="27" height="27" alt=""></a>' + logo + '<span class="eyebrow">LITEBI · ANALYTICS</span><h1>' + esc(theme.title) + '</h1>' + (theme.subtitle ? '<h2>' + esc(theme.subtitle) + '</h2>' : '') + '<p>Gerado pelo LiteBI' + (meta.fileName ? ' \u00b7 fonte: ' + esc(meta.fileName) : '') + ' \u00b7 ' + new Date().toLocaleString('pt-BR') + '</p></div><div class="board" id="board"></div><div class="foot">' + (meta.rowCount || rows.length) + ' registros analisados.</div>';
     var board = document.getElementById('board');
 
     comps.forEach(function (comp) {

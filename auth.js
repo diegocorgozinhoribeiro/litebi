@@ -6,6 +6,7 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcryptjs');
 const { pool } = require('./db');
+const LEGAL = require('./legal');
 
 passport.serializeUser((user, done) => done(null, user.id));
 
@@ -52,8 +53,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: base + '/auth/google/callback',
+      passReqToCallback: true,
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
         const email = (
           (profile.emails && profile.emails[0] && profile.emails[0].value) || ''
@@ -75,11 +77,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             );
           }
         } else {
+          const consent = req.session && req.session.legalConsent;
+          const consentIsCurrent = consent
+            && Date.now() - Number(consent.acceptedAt) < 15 * 60 * 1000
+            && consent.termsVersion === LEGAL.termsVersion
+            && consent.privacyVersion === LEGAL.privacyVersion;
+          if (!consentIsCurrent) return done(null, false, { message: 'legal_required' });
           const ins = await pool.query(
-            'INSERT INTO users (email, name, google_id, avatar_url) VALUES ($1, $2, $3, $4) RETURNING *',
-            [email, name, googleId, avatar]
+            `INSERT INTO users (email, name, google_id, avatar_url, legal_accepted_at, terms_version, privacy_version)
+             VALUES ($1, $2, $3, $4, now(), $5, $6, $7) RETURNING *`,
+            [email, name, googleId, avatar, LEGAL.termsVersion, LEGAL.privacyVersion]
           );
           u = ins.rows[0];
+          delete req.session.legalConsent;
         }
         return done(null, u);
       } catch (e) {

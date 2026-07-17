@@ -14,6 +14,7 @@ const PgSession = require('connect-pg-simple')(session);
 const bcrypt = require('bcryptjs');
 const { pool, init } = require('./db');
 const passport = require('./auth');
+const LEGAL = require('./legal');
 
 const app = express();
 const isProd = process.env.NODE_ENV === 'production';
@@ -44,7 +45,7 @@ app.use((req, res, next) => {
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-7', legacyHeaders: false });
 const aiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 12, standardHeaders: 'draft-7', legacyHeaders: false });
 const publishLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 90, standardHeaders: 'draft-7', legacyHeaders: false });
-app.use(['/auth/login', '/auth/signup'], authLimiter);
+app.use(['/auth/login', '/auth/signup', '/auth/legal-consent'], authLimiter);
 app.use('/api/ai', aiLimiter);
 app.use('/api/dashboards', (req, res, next) => req.method === 'GET' ? next() : publishLimiter(req, res, next));
 
@@ -84,7 +85,15 @@ function requireAuth(req, res, next) {
 function slugId() { return crypto.randomBytes(6).toString('base64url'); }
 function invalidatePublicDashboards() { publicDashboardsCache = { rows: null, expiresAt: 0 }; }
 function protectDashboardScripts(html) {
-  return String(html || '').replace(/<script\b(?![^>]*\bdata-cfasync=)/gi, '<script data-cfasync="false"');
+  let output = String(html || '').replace(/<script\b(?![^>]*\bdata-cfasync=)/gi, '<script data-cfasync="false"');
+  if (!/<link\b[^>]*rel=["'](?:shortcut )?icon["']/i.test(output)) {
+    output = output.replace(/<\/head>/i, '<link rel="icon" type="image/png" href="/logo.png"></head>');
+  }
+  if (!/data-litebi-home/i.test(output)) {
+    const homeLink = '<a data-litebi-home href="/" target="_blank" rel="noopener" aria-label="Ir para o LiteBI" style="position:fixed;z-index:9999;top:18px;right:18px;width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.35);border-radius:12px;background:rgba(15,36,57,.72);box-shadow:0 8px 24px rgba(0,0,0,.18);backdrop-filter:blur(8px)"><img src="/logo.png" width="27" height="27" alt=""></a>';
+    output = output.replace(/<body([^>]*)>/i, '<body$1>' + homeLink);
+  }
+  return output;
 }
 function safeNext(value, fallback = '/dashboards') {
   const next = String(value || '');
@@ -122,7 +131,7 @@ async function teamRole(userId, teamId) {
 function errorPage(msg, code) {
   return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'
     + '<meta name="viewport" content="width=device-width, initial-scale=1">'
-    + '<title>LiteBI</title></head><body style="margin:0;font-family:ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif;background:#f6f7f9;color:#1a1a1a">'
+    + '<link rel="icon" type="image/png" href="/logo.png"><title>LiteBI</title></head><body style="margin:0;font-family:ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif;background:#f6f7f9;color:#1a1a1a">'
     + '<div style="max-width:520px;margin:90px auto;text-align:center;padding:0 20px">'
     + '<div style="font-size:34px;font-weight:800;letter-spacing:-.02em">LiteBI</div>'
     + '<p style="font-size:18px;color:#6b7280;margin:14px 0 24px">' + msg + '</p>'
@@ -136,12 +145,14 @@ app.post('/auth/signup', async (req, res, next) => {
     const email = String(req.body.email || '').toLowerCase().trim();
     const password = String(req.body.password || '');
     const name = String(req.body.name || '').trim() || (email ? email.split('@')[0] : '');
+    if (req.body.legalAccepted !== true) return res.status(400).json({ error: 'Você precisa aceitar os Termos de Uso e confirmar a leitura do Aviso de Privacidade.' });
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: 'E-mail inválido.' });
     if (password.length < 6) return res.status(400).json({ error: 'A senha deve ter ao menos 6 caracteres.' });
     const hash = await bcrypt.hash(password, 12);
     const { rows } = await pool.query(
-      'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING *',
-      [email, hash, name]
+      `INSERT INTO users (email, password_hash, name, legal_accepted_at, terms_version, privacy_version)
+       VALUES ($1, $2, $3, now(), $4, $5) RETURNING *`,
+      [email, hash, name, LEGAL.termsVersion, LEGAL.privacyVersion]
     );
     req.login(rows[0], (err) => {
       if (err) return next(err);
@@ -151,6 +162,16 @@ app.post('/auth/signup', async (req, res, next) => {
     if (e && e.code === '23505') return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
     next(e);
   }
+});
+
+app.post('/auth/legal-consent', (req, res) => {
+  if (req.body.accepted !== true) return res.status(400).json({ error: 'O aceite é obrigatório para criar uma conta.' });
+  req.session.legalConsent = {
+    acceptedAt: Date.now(),
+    termsVersion: LEGAL.termsVersion,
+    privacyVersion: LEGAL.privacyVersion,
+  };
+  res.json({ ok: true, termsVersion: LEGAL.termsVersion, privacyVersion: LEGAL.privacyVersion });
 });
 
 app.post('/auth/login', (req, res, next) => {
@@ -182,7 +203,10 @@ app.get('/auth/google', (req, res, next) => {
 });
 
 app.get('/auth/google/callback', (req, res, next) => {
-  passport.authenticate('google', (err, user) => {
+  passport.authenticate('google', (err, user, info) => {
+    if (info && info.message === 'legal_required') {
+      return res.redirect('/signup?error=legal&next=' + encodeURIComponent(safeNext(req.session.next)));
+    }
     if (err || !user) return res.redirect('/login?error=google');
     req.login(user, (e) => {
       if (e) return res.redirect('/login?error=google');
@@ -194,7 +218,7 @@ app.get('/auth/google/callback', (req, res, next) => {
 
 // ---------- API ----------
 app.get('/api/me', (req, res) => {
-  res.json({ user: publicUser(req.user), googleEnabled: !!process.env.GOOGLE_CLIENT_ID });
+  res.json({ user: publicUser(req.user), googleEnabled: !!process.env.GOOGLE_CLIENT_ID, legal: LEGAL });
 });
 
 // ---------- Perfil e amigos ----------
@@ -694,6 +718,8 @@ app.get('/profile', requireAuth, (req, res) => res.sendFile(path.join(PUB, 'prof
 app.get('/u/:id', (req, res) => res.sendFile(path.join(PUB, 'profile.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(PUB, 'termos.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(PUB, 'privacidade.html')));
+app.get('/termos', (req, res) => res.sendFile(path.join(PUB, 'termos.html')));
+app.get('/privacidade', (req, res) => res.sendFile(path.join(PUB, 'privacidade.html')));
 app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, 'logo.png')));
 // Arquivos estáticos (cloud.js, base-exemplo.csv, etc.)
 app.use(express.static(PUB, { etag: true, lastModified: true, maxAge: isProd ? '1d' : 0 }));
