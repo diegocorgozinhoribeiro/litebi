@@ -83,6 +83,9 @@ function requireAuth(req, res, next) {
 }
 function slugId() { return crypto.randomBytes(6).toString('base64url'); }
 function invalidatePublicDashboards() { publicDashboardsCache = { rows: null, expiresAt: 0 }; }
+function protectDashboardScripts(html) {
+  return String(html || '').replace(/<script\b(?![^>]*\bdata-cfasync=)/gi, '<script data-cfasync="false"');
+}
 function safeNext(value, fallback = '/dashboards') {
   const next = String(value || '');
   return next.startsWith('/') && !next.startsWith('//') && !next.includes('\\') ? next : fallback;
@@ -674,8 +677,8 @@ app.get('/d/:slug', async (req, res, next) => {
     res.set({
       'Content-Type': 'text/html; charset=utf-8',
       'Content-Security-Policy': "sandbox allow-scripts allow-downloads; default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: blob: https:; font-src data: https:; connect-src 'none'",
-      'Cache-Control': d.visibility === 'public' ? 'public, max-age=60, stale-while-revalidate=300' : 'private, no-store',
-    }).send(d.html);
+      'Cache-Control': d.visibility === 'public' ? 'public, max-age=60, stale-while-revalidate=300, no-transform' : 'private, no-store, no-transform',
+    }).send(protectDashboardScripts(d.html));
   } catch (e) { next(e); }
 });
 

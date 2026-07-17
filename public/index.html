@@ -1858,11 +1858,11 @@ button:disabled { opacity: .6; cursor: wait; }
     return '<!DOCTYPE html>\n<html lang="pt-BR"><head><meta charset="UTF-8">' +
       '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
       '<title>' + esc(theme.title) + '</title>' +
-      '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>' +
+      '<script data-cfasync="false" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>' +
       '<style>' + EXPORT_CSS + '</style></head><body>' +
       '<div id="dash-root"></div>' +
-      '<script>window.__LITEBI__=' + data + ';<\/script>' +
-      '<script>(' + runtime + ')();<\/script>' +
+      '<script data-cfasync="false">window.__LITEBI__=' + data + ';<\/script>' +
+      '<script data-cfasync="false">(' + runtime + ')();<\/script>' +
       '</body></html>';
   }
 
