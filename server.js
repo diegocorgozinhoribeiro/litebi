@@ -93,11 +93,15 @@ function protectDashboardScripts(html, appUrl) {
   let output = String(html || '').replace(/<script\b(?![^>]*\bdata-cfasync=)/gi, '<script data-cfasync="false"');
   const safeAppUrl = escapeHtmlAttribute(String(appUrl || '').replace(/\/$/, ''));
   const favicon = '<link rel="icon" type="image/png" href="' + logoDataUri + '">';
+  const tableScrollFix = '<style data-litebi-table-scroll-fix>.cell-body:has(>table){padding:0!important;overflow:auto!important;overscroll-behavior:contain;scrollbar-gutter:stable}.cell-body>table{width:100%;min-width:max-content}.cell-body>table th{position:static!important;top:auto!important}</style>';
   const homeLink = '<a data-litebi-home href="' + safeAppUrl + '/" target="_blank" rel="noopener noreferrer" aria-label="Ir para o LiteBI" title="Ir para o LiteBI" style="position:fixed;z-index:9999;top:18px;right:18px;width:44px;height:44px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.35);border-radius:12px;background:rgba(15,36,57,.82);box-shadow:0 8px 24px rgba(0,0,0,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)"><img src="' + logoDataUri + '" width="28" height="28" alt="" style="display:block;width:28px;height:28px;object-fit:contain"></a>';
   if (/<link\b[^>]*rel=["'](?:shortcut )?icon["'][^>]*>/i.test(output)) {
     output = output.replace(/<link\b[^>]*rel=["'](?:shortcut )?icon["'][^>]*>/i, favicon);
   } else {
     output = output.replace(/<\/head>/i, favicon + '</head>');
+  }
+  if (!/data-litebi-table-scroll-fix/i.test(output)) {
+    output = output.replace(/<\/head>/i, tableScrollFix + '</head>');
   }
   if (/<a\b[^>]*data-litebi-home[^>]*>[\s\S]*?<\/a>/i.test(output)) {
     output = output.replace(/<a\b[^>]*data-litebi-home[^>]*>[\s\S]*?<\/a>/i, homeLink);
@@ -113,6 +117,12 @@ function safeNext(value, fallback = '/dashboards') {
 function validateDashboardPayload(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return 'Estado do dashboard ausente.';
   if (payload.components && (!Array.isArray(payload.components) || payload.components.length > 150)) return 'O dashboard excede o limite de 150 componentes.';
+  if (payload.pages && (!Array.isArray(payload.pages) || !payload.pages.length || payload.pages.length > 8)) return 'O dashboard deve ter entre 1 e 8 abas.';
+  if (Array.isArray(payload.pages) && Array.isArray(payload.components)) {
+    const pageIds = new Set(payload.pages.map((page) => String(page && page.id || '')));
+    if (pageIds.size !== payload.pages.length || pageIds.has('')) return 'As abas do dashboard são inválidas.';
+    if (payload.components.some((component) => component && component.pageId && !pageIds.has(String(component.pageId)))) return 'Um componente referencia uma aba inexistente.';
+  }
   if (payload.rows && (!Array.isArray(payload.rows) || payload.rows.length > 100000)) return 'A base excede o limite de 100.000 linhas.';
   const bytes = Buffer.byteLength(JSON.stringify(payload));
   return bytes > 12 * 1024 * 1024 ? 'Dashboard muito grande (limite ~12MB).' : null;
@@ -467,7 +477,11 @@ app.post('/api/ai/dashboard', requireAuth, async (req, res, next) => {
 
     const compact = {
       rows: Math.max(0, Number(input.rowCount) || 0),
-      columns: input.columns.slice(0, 30).map((c) => ({
+      pages: (Array.isArray(input.pages) && input.pages.length ? input.pages : [{ id: 'page-overview', name: 'Visão geral' }]).slice(0, 8).map((page, index) => ({
+        id: String(page.id || ('page-' + (index + 1))).slice(0, 80),
+        name: String(page.name || ('Aba ' + (index + 1))).slice(0, 60),
+      })),
+      columns: input.columns.slice(0, 60).map((c) => ({
         name: String(c.name || '').slice(0, 80),
         type: String(c.type || 'texto'),
         distinct: Number(c.distinct) || 0,
@@ -475,7 +489,7 @@ app.post('/api/ai/dashboard', requireAuth, async (req, res, next) => {
       })),
       sample: Array.isArray(input.sample) ? input.sample.slice(0, 3).map((row) => {
         const clean = {};
-        Object.entries(row && typeof row === 'object' ? row : {}).slice(0, 30).forEach(([key, value]) => { clean[String(key).slice(0, 80)] = String(value == null ? '' : value).slice(0, 120); });
+        Object.entries(row && typeof row === 'object' ? row : {}).slice(0, 60).forEach(([key, value]) => { clean[String(key).slice(0, 80)] = String(value == null ? '' : value).slice(0, 120); });
         return clean;
       }) : [],
     };
@@ -488,17 +502,20 @@ app.post('/api/ai/dashboard', requireAuth, async (req, res, next) => {
       if (description) column.description = description.slice(0, 120);
     });
     const prompt = [
-      'Responda SOMENTE JSON válido, sem markdown, no formato {"theme":{"title":"...","subtitle":"...","color1":"#RRGGBB","color2":"#RRGGBB"},"components":[...]}.',
-      'Retorne exatamente 3 KPIs, 4 gráficos e 1 tabela. Use apenas nomes de colunas fornecidos; não invente colunas.',
+      'Responda SOMENTE JSON válido, sem markdown, no formato {"theme":{"title":"...","subtitle":"...","color1":"#RRGGBB","color2":"#RRGGBB"},"pages":[{"id":"id fornecido","name":"nome fornecido","topic":"assunto analítico da aba","components":[...]}]}.',
+      'Retorne exatamente uma entrada para cada página fornecida, preservando id e name. Para CADA página, retorne exatamente 3 KPIs, 4 gráficos e 1 tabela. Use apenas nomes de colunas fornecidos; não invente colunas.',
+      'Cada página deve tratar de um assunto analítico distinto e coerente com seu nome. Distribua métricas, dimensões e recortes entre as páginas, evitando repetir o mesmo KPI ou gráfico em abas diferentes.',
       'Cada KPI DEVE ser {"type":"kpi","title":"...","config":{"mode":"simples","column":"coluna","agg":"soma|media|max|min|contagem","format":"numero|moeda|percentual"}}.',
       'Cada gráfico DEVE ser {"type":"chart","title":"...","config":{"type":"line|column|bar|pie","x":"coluna","y":"coluna","agg":"soma|media|max|min|contagem","dateGroup":"dia|mes|ano"}}.',
       'A tabela DEVE ser {"type":"table","title":"...","config":{"columns":["coluna"],"sortBy":"coluna","limit":8}}.',
       'Use line somente com data no eixo x; use column/bar/pie somente com categoria/texto no x. Prefira métricas numéricas úteis, não IDs.',
+      'Escreva todos os títulos em português natural e com significado de negócio. Interprete snake_case, abreviações, descrição e amostras. Nunca use títulos mecânicos como "Total nome_da_coluna". Exemplo obrigatório: home_goals deve virar algo como "Total de gols do mandante", não "Total de home_goals".',
+      'Os títulos dos gráficos e tabelas também devem explicar o significado dos dados, sem expor nomes técnicos de colunas ao usuário.',
       'Se houver foco do usuário, priorize esse objetivo ao escolher KPIs e gráficos; se faltar uma coluna necessária, use a melhor alternativa disponível.',
       JSON.stringify(compact),
     ].join('\n');
     const aiAbort = new AbortController();
-    const aiTimeout = setTimeout(() => aiAbort.abort(), 30000);
+    const aiTimeout = setTimeout(() => aiAbort.abort(), 70000);
     const openaiOptions = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + openaiKey },
@@ -507,7 +524,7 @@ app.post('/api/ai/dashboard', requireAuth, async (req, res, next) => {
         model: process.env.OPENAI_MODEL || 'gpt-5.4-nano',
         input: prompt,
         reasoning: { effort: 'none' },
-        max_output_tokens: 1800,
+        max_output_tokens: 10000,
         text: { format: { type: 'json_object' } },
       }),
     };
@@ -542,18 +559,22 @@ app.post('/api/ai/dashboard', requireAuth, async (req, res, next) => {
       console.error('[LiteBI] JSON inválido retornado pela IA:', text.slice(0, 1200));
       return res.status(502).json({ error: 'A IA respondeu, mas o JSON veio incompleto ou inválido.' });
     }
-    if (!Array.isArray(result.components)) return res.status(502).json({ error: 'A IA não retornou componentes.' });
-    // O contrato da IA exige 3 KPIs + 4 gráficos + 1 tabela = 8 componentes.
-    // Não truncar para 8 aqui: o frontend valida a contagem completa.
-    const components = result.components.map((component) => {
+    const normalizeComponent = (component) => {
       if (!component || typeof component !== 'object') return null;
       if (['line', 'column', 'bar', 'pie'].includes(component.type)) {
         const { type, x, y, agg, dateGroup } = component;
         return { type: 'chart', title: component.title || (String(type) + ' por ' + String(x || 'categoria')), config: { type, x, y, agg, dateGroup } };
       }
       return component;
-    }).filter(Boolean).slice(0, 8);
-    res.json({ theme: result.theme && typeof result.theme === 'object' ? result.theme : null, components });
+    };
+    const resultPages = Array.isArray(result.pages) ? result.pages : (Array.isArray(result.components) ? [{ id: compact.pages[0].id, name: compact.pages[0].name, components: result.components }] : []);
+    if (!resultPages.length) return res.status(502).json({ error: 'A IA não retornou as abas do relatório.' });
+    const pages = compact.pages.map((requested, index) => {
+      const generated = resultPages.find((page) => page && String(page.id) === requested.id) || resultPages[index] || {};
+      const components = (Array.isArray(generated.components) ? generated.components : []).map(normalizeComponent).filter(Boolean).slice(0, 8);
+      return { id: requested.id, name: requested.name, topic: String(generated.topic || requested.name).slice(0, 120), components };
+    });
+    res.json({ theme: result.theme && typeof result.theme === 'object' ? result.theme : null, pages });
   } catch (e) { next(e); }
 });
 

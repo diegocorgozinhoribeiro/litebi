@@ -136,8 +136,6 @@ body.dark .theme-switch-thumb { background: var(--lb-accent); transform: transla
 body.dark .notion-blue-bg, body.lb-dark .notion-blue-bg { background: var(--lb-accent-soft) !important; }
 .dark .preview-title, .dark .exp-preview { background: var(--lb-brand); }
 .dark .card, .dark .feature, .dark .preview { color: var(--lb-ink); }
-.builder-page .intake-backdrop { display: none !important; }
-.builder-page .intake-modal { position: relative; top: auto; left: auto; transform: none; width: min(1180px, calc(100% - 44px)); max-width: 1180px; max-height: none; margin: 28px auto 80px; }
 .builder-page #screen-dashboard { padding-top: 30px; }
 .builder-page .intake-modal .intake-close { top: 18px; right: 22px; }
 .builder-page .intake-modal .feature-row { display: grid; }

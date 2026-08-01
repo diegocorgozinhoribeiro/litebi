@@ -630,9 +630,14 @@ button:disabled { opacity: .6; cursor: wait; }
 /* Modais */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; z-index: 60; padding: 20px; }
 .modal-backdrop.open { display: flex; }
+body.intake-open { overflow:hidden; }
 .intake-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.48); display: none; z-index: 55; }
 .intake-backdrop.open { display: block; }
-.intake-modal { position: fixed; z-index: 56; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 60vw; max-width: 820px; max-height: 84vh; overflow-y: auto; margin: 0; padding: 30px 34px 34px; background: var(--notion-bg,#fff); border: 1px solid var(--notion-border,#e5e7eb); border-radius: 18px; box-shadow: 0 24px 80px rgba(0,0,0,.28); }
+.intake-modal { position: fixed; z-index: 56; top: 50%; left: 50%; transform: translate(-50%,-50%); width: min(900px,calc(100vw - 40px)); max-width: 900px; max-height: min(88vh,900px); overflow-x: hidden; overflow-y: scroll; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width:auto;scrollbar-color:var(--notion-blue) var(--notion-surface-hover);touch-action:pan-y;-webkit-overflow-scrolling:touch;margin:0;padding:30px 34px 34px;background:var(--notion-bg,#fff);border:1px solid var(--notion-border,#e5e7eb);border-radius:18px;box-shadow:0 24px 80px rgba(0,0,0,.28); }
+.intake-modal::-webkit-scrollbar { width:12px; }
+.intake-modal::-webkit-scrollbar-track { background:var(--notion-surface-hover);border-radius:0 18px 18px 0; }
+.intake-modal::-webkit-scrollbar-thumb { background:var(--notion-blue);border:3px solid var(--notion-surface-hover);border-radius:999px; }
+.intake-modal::-webkit-scrollbar-thumb:hover { background:color-mix(in srgb,var(--notion-blue) 82%,#173b63); }
 .intake-modal.hidden { display: none; }
 .embedded .intake-modal { width: 100%; max-width: none; max-height: none; height: 100%; top: 0; left: 0; transform: none; border: 0; border-radius: 0; box-shadow: none; }
 .embedded .intake-backdrop { display: none !important; }
@@ -646,6 +651,7 @@ button:disabled { opacity: .6; cursor: wait; }
 .intake-close { position: absolute; top: 14px; right: 16px; border: 0; background: transparent; color: var(--notion-text-soft,#6b7280); font-size: 24px; line-height: 1; cursor: pointer; }
 .intake-modal .feature-row { display: none; }
 @media (max-width: 720px) { .intake-modal { width: calc(100vw - 28px); max-height: 88vh; padding: 24px 20px; } }
+.intake-modal #previewTable .tbl-wrap { max-height:none;overflow-x:auto;overflow-y:visible;overscroll-behavior-x:contain; }
 .modal { background: var(--notion-surface); border-radius: 16px; width: 100%; max-width: 460px; max-height: 88vh; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
 .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--notion-border-soft); }
 .modal-head h3 { margin: 0; font-size: 17px; }
@@ -663,6 +669,45 @@ button:disabled { opacity: .6; cursor: wait; }
 .context-column label { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .context-column input { background: var(--notion-surface); }
 @media (max-width: 620px) { .context-column { grid-template-columns: 1fr; gap: 4px; } }
+.report-structure { margin:20px 0;padding:16px;background:var(--notion-surface);border:1px solid var(--notion-border-soft);border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.03); }
+.page-plan-head { display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px; }
+.page-plan-copy { min-width:0; }
+.page-plan-title-row { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+.page-plan-title { margin:0;font-size:15px;font-weight:750;color:var(--notion-text);letter-spacing:-.01em; }
+.page-plan-count { display:inline-flex;align-items:center;min-height:24px;padding:3px 8px;border-radius:999px;background:var(--notion-blue-bg);color:var(--notion-blue);font-size:11px;font-weight:750;font-variant-numeric:tabular-nums; }
+.page-plan-description { display:block;margin-top:4px;color:var(--notion-text-soft);font-size:12px;line-height:1.45;text-wrap:pretty; }
+.page-add-button { flex:0 0 auto;min-height:40px;padding:9px 13px;border:1px solid color-mix(in srgb,var(--notion-blue) 34%,var(--notion-border));background:var(--notion-blue-bg);color:var(--notion-blue);box-shadow:none; }
+.page-add-button:hover { background:color-mix(in srgb,var(--notion-blue-bg) 70%,var(--notion-blue) 12%); }
+.page-add-button:disabled { opacity:.45;cursor:not-allowed;transform:none; }
+.page-plan-list { display:grid;grid-template-columns:1fr;gap:8px; }
+.page-plan-item { display:grid;grid-template-columns:32px minmax(0,1fr) 40px;align-items:center;gap:10px;padding:10px;background:var(--notion-bg);border:1px solid var(--notion-border-soft);border-radius:11px;transition:border-color .16s ease,box-shadow .16s ease; }
+.page-plan-item:focus-within { border-color:color-mix(in srgb,var(--notion-blue) 52%,var(--notion-border));box-shadow:0 0 0 3px color-mix(in srgb,var(--notion-blue) 14%,transparent); }
+.page-plan-index { display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--notion-surface);border:1px solid var(--notion-border-soft);color:var(--notion-text-soft);font-size:11px;font-weight:800;font-variant-numeric:tabular-nums; }
+.page-plan-input-wrap { min-width:0; }
+.page-plan-input-wrap label { display:block;margin:0 0 3px;color:var(--notion-text-soft);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase; }
+.page-plan-item input { min-width:0;width:100%;height:32px;border:0;background:transparent;padding:4px 2px;color:var(--notion-text);font-size:13px;font-weight:650;box-shadow:none; }
+.page-plan-item input:focus { outline:0;box-shadow:none; }
+.page-remove-button { width:40px;height:40px;padding:0;border:0;background:transparent;color:var(--notion-text-faint);box-shadow:none; }
+.page-remove-button:hover,.page-remove-button:focus-visible { background:var(--notion-red-bg,#fff1f0);color:var(--notion-red,#b42318); }
+.page-remove-button:disabled { visibility:hidden; }
+.dashboard-tabs-shell { display:flex;align-items:center;gap:8px;margin:0 0 14px;padding:6px;background:var(--notion-surface);border:1px solid var(--notion-border-soft);border-radius:14px;overflow-x:auto;scrollbar-width:thin; }
+.dashboard-tab-group { display:flex;align-items:center;gap:3px;flex:0 0 auto; }
+.dashboard-tab { min-height:38px;padding:8px 13px;border:0;border-radius:9px;background:transparent;color:var(--notion-text-soft);font-size:13px;font-weight:650;white-space:nowrap;box-shadow:none; }
+.dashboard-tab:hover { background:var(--notion-bg);color:var(--notion-text); }
+.dashboard-tab[aria-selected=true] { background:var(--notion-blue-bg);color:var(--notion-blue); }
+.dashboard-tab-edit { width:36px;height:36px;padding:0;border:0;background:transparent;color:var(--notion-text-soft);box-shadow:none;opacity:.7; }
+.dashboard-tab-edit:hover,.dashboard-tab-edit:focus-visible { opacity:1;background:var(--notion-bg); }
+.dashboard-tab-delete { width:36px;height:36px;padding:0;border:0;background:transparent;color:var(--notion-text-faint);box-shadow:none;opacity:.65; }
+.dashboard-tab-delete:hover,.dashboard-tab-delete:focus-visible { opacity:1;background:var(--notion-red-bg,#fff1f0);color:var(--notion-red,#b42318); }
+.dashboard-tab-add { flex:0 0 auto;min-height:38px;padding:8px 13px;border:1px dashed var(--notion-border);background:transparent;color:var(--notion-text-soft);box-shadow:none;white-space:nowrap; }
+.dashboard-tab-add:hover { border-color:var(--notion-blue);background:var(--notion-blue-bg);color:var(--notion-blue); }
+.dashboard-tab-add:disabled { opacity:.45;cursor:not-allowed;transform:none; }
+.dashboard-tab-rename { display:flex;align-items:center;gap:4px;padding:2px 3px 2px 8px;border:1px solid var(--notion-blue);border-radius:9px;background:var(--notion-surface); }
+.dashboard-tab-rename input { width:150px;min-width:90px;height:32px;padding:4px 2px;border:0;background:transparent;box-shadow:none;font-size:13px;font-weight:650;color:var(--notion-text); }
+.dashboard-tab-rename input:focus { outline:0; }
+.dashboard-tab-rename button { width:32px;height:32px;padding:0;border:0;background:transparent;color:var(--notion-text-soft);box-shadow:none; }
+.dashboard-tab-rename [data-page-rename-save] { color:var(--notion-blue); }
+@media(max-width:620px){.page-plan-head{align-items:flex-start;flex-direction:column}.page-add-button{width:100%;justify-content:center}.page-plan-item{grid-template-columns:32px minmax(0,1fr) 40px}.dashboard-tabs-shell{margin-inline:-2px}}
 .hint { font-size: 12px; color: var(--notion-orange); min-height: 14px; }
 .color-row { display: flex; gap: 8px; }
 .swatch { width: 26px; height: 26px; border-radius: 7px; cursor: pointer; border: 2px solid transparent; }
@@ -771,6 +816,13 @@ button:disabled { opacity: .6; cursor: wait; }
       <textarea id="analysisFocus" maxlength="320" placeholder="Ex.: Quero entender as vendas, comparar custos por mês e descobrir quais produtos têm melhor margem."></textarea>
       <small class="notion-muted">Uma orientação curta ajuda a IA a escolher os indicadores certos.</small>
     </div>
+    <section class="report-structure" aria-labelledby="pagePlanTitle">
+      <div class="page-plan-head">
+        <div class="page-plan-copy"><div class="page-plan-title-row"><h4 class="page-plan-title" id="pagePlanTitle">Estruture seu relatório</h4><span class="page-plan-count" id="pagePlanCount">1 de 8 abas</span></div><span class="page-plan-description">Separe a análise por assuntos. A IA criará KPIs, gráficos e uma tabela coerentes para cada aba.</span></div>
+        <button id="pagePlanAdd" class="page-add-button" type="button">＋ Adicionar aba</button>
+      </div>
+      <div id="pagePlanList" class="page-plan-list"></div>
+    </section>
     <div class="field" style="margin-bottom:0">
       <label>O que significa cada coluna?</label>
       <div id="columnDescriptions" class="context-columns"></div>
@@ -787,6 +839,7 @@ button:disabled { opacity: .6; cursor: wait; }
 
 <!-- ===== TELA 3: DASHBOARD ===== -->
 <main id="screen-dashboard" class="container hidden">
+  <nav id="dashboardTabs" class="dashboard-tabs-shell" aria-label="Abas do dashboard" role="tablist"></nav>
   <div class="dash-toolbar" id="dashboardActions">
     <span class="file-pill" id="dashFileName"></span>
     <div class="group editor-only">
@@ -870,9 +923,11 @@ button:disabled { opacity: .6; cursor: wait; }
   // ---------- Estado ----------
   const STORAGE_KEY = 'litebi_state_v2';
   const LARGE_STATE_DB = 'litebi_state_db_v1';
+  const DEFAULT_PAGE_ID = 'page-overview';
   const DEFAULT_THEME = { title: 'Meu Dashboard', subtitle: '', color1: '#5e9fe8', color2: '#72bc8f', fontFamily: 'DM Sans', logoData: '' };
   const state = {
     meta: null, columns: [], rows: [], components: [], filters: [],
+    pages: [{ id: DEFAULT_PAGE_ID, name: 'Visão geral', topic: 'Visão geral' }], activePageId: DEFAULT_PAGE_ID,
     role: 'owner', theme: Object.assign({}, DEFAULT_THEME)
   };
 
@@ -886,7 +941,16 @@ button:disabled { opacity: .6; cursor: wait; }
   const $ = (s, c) => (c || document).querySelector(s);
   const $$ = (s, c) => Array.from((c || document).querySelectorAll(s));
   const uid = () => 'c' + Math.random().toString(36).slice(2, 9);
+  const pageUid = () => 'p' + Math.random().toString(36).slice(2, 9);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function ensurePages() {
+    if (!Array.isArray(state.pages) || !state.pages.length) state.pages = [{ id: DEFAULT_PAGE_ID, name: 'Visão geral', topic: 'Visão geral' }];
+    state.pages = state.pages.slice(0, 8).map((page, index) => ({ id: String(page.id || pageUid()), name: String(page.name || ('Aba ' + (index + 1))).slice(0, 60), topic: String(page.topic || page.name || ('Aba ' + (index + 1))).slice(0, 120) }));
+    const ids = new Set(state.pages.map((page) => page.id));
+    if (!ids.has(state.activePageId)) state.activePageId = state.pages[0].id;
+    state.components.forEach((component) => { if (!ids.has(component.pageId)) component.pageId = state.pages[0].id; });
+  }
+  const activeComponents = () => state.components.filter((component) => component.pageId === state.activePageId);
 
   // ---------- Parsing ----------
   function parseNumber(v) {
@@ -930,6 +994,22 @@ button:disabled { opacity: .6; cursor: wait; }
   }
   const isNumeric = (t) => ['numero', 'moeda', 'percentual'].includes(t);
   const colByName = (name) => state.columns.find((c) => c.name === name);
+  function semanticColumnLabel(name) {
+    const column = colByName(name), described = column && String(column.description || '').trim().replace(/[.!?]+$/, '');
+    if (described) return described.charAt(0).toLowerCase() + described.slice(1);
+    const key = String(name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    const phrases = {
+      home_goals: 'gols do mandante', away_goals: 'gols do visitante', total_goals: 'gols da partida',
+      home_team: 'time mandante', away_team: 'time visitante', match_date: 'data da partida',
+      total_sales: 'vendas totais', sales_amount: 'valor das vendas', total_revenue: 'faturamento total',
+      net_revenue: 'receita líquida', gross_revenue: 'receita bruta', profit_margin: 'margem de lucro',
+      customer_name: 'cliente', product_name: 'produto', order_date: 'data do pedido', quantity_sold: 'quantidade vendida'
+    };
+    if (phrases[key]) return phrases[key];
+    const words = { home: 'mandante', away: 'visitante', goals: 'gols', goal: 'gol', team: 'time', sales: 'vendas', sale: 'venda', revenue: 'receita', profit: 'lucro', margin: 'margem', amount: 'valor', quantity: 'quantidade', count: 'quantidade', price: 'preço', cost: 'custo', customer: 'cliente', product: 'produto', order: 'pedido', date: 'data', month: 'mês', year: 'ano', category: 'categoria', region: 'região', name: 'nome', total: 'total', average: 'média', avg: 'média' };
+    return key.split('_').map((word) => words[word] || word).join(' ');
+  }
+  const titleText = (value) => { const text = String(value || ''); return text.charAt(0).toUpperCase() + text.slice(1); };
 
   // ---------- Paleta a partir de 2 cores ----------
   function hexLerp(a, b, t) {
@@ -1006,6 +1086,7 @@ button:disabled { opacity: .6; cursor: wait; }
       Object.assign(state, saved);
       state.theme = Object.assign({}, DEFAULT_THEME, state.theme || {});
       state.components.forEach((c) => { if (c.placed === undefined) c.placed = true; });
+      ensurePages();
       return !!(state.meta && (state.rows.length || stateNeedsRows));
     } catch (e) { return false; }
   }
@@ -1141,11 +1222,11 @@ button:disabled { opacity: .6; cursor: wait; }
     }
   }
   function kpiSubtitle(cfg) {
-    if (cfg.mode === 'diferenca') return cfg.column + ' − ' + cfg.column2;
-    if (cfg.mode === 'reducao') return 'Redução % (' + cfg.column + ' → ' + cfg.column2 + ')';
-    if (cfg.mode === 'crescimento') return 'Crescimento % (' + cfg.column + ' → ' + cfg.column2 + ')';
-    if (cfg.mode === 'rotulo') { const dir = cfg.rankDir === 'menor' ? 'Menor' : 'Maior'; const base = cfg.rankColumn ? (dir + ' ' + (cfg.rankAgg || 'soma') + ' de ' + cfg.rankColumn) : 'Mais frequente'; return base + ' · por ' + cfg.labelColumn; }
-    return (cfg.agg || '').toUpperCase() + ' de ' + cfg.column;
+    if (cfg.mode === 'diferenca') return semanticColumnLabel(cfg.column) + ' − ' + semanticColumnLabel(cfg.column2);
+    if (cfg.mode === 'reducao') return 'Redução % (' + semanticColumnLabel(cfg.column) + ' → ' + semanticColumnLabel(cfg.column2) + ')';
+    if (cfg.mode === 'crescimento') return 'Crescimento % (' + semanticColumnLabel(cfg.column) + ' → ' + semanticColumnLabel(cfg.column2) + ')';
+    if (cfg.mode === 'rotulo') { const dir = cfg.rankDir === 'menor' ? 'Menor' : 'Maior'; const base = cfg.rankColumn ? (dir + ' ' + (cfg.rankAgg || 'soma') + ' de ' + semanticColumnLabel(cfg.rankColumn)) : 'Mais frequente'; return base + ' · por ' + semanticColumnLabel(cfg.labelColumn); }
+    return (cfg.agg || '').toUpperCase() + ' de ' + semanticColumnLabel(cfg.column);
   }
   function renderTable(cfg) {
     const rows = applyFilters(state.rows);
@@ -1177,7 +1258,7 @@ button:disabled { opacity: .6; cursor: wait; }
 
   function gridRows() {
     let rows = BASE_ROWS;
-    state.components.forEach((c) => { if (c.placed) rows = Math.max(rows, (c.y || 0) + (c.h || 1)); });
+    activeComponents().forEach((c) => { if (c.placed) rows = Math.max(rows, (c.y || 0) + (c.h || 1)); });
     return rows + dragExtra;
   }
   function layoutGrid() {
@@ -1189,17 +1270,17 @@ button:disabled { opacity: .6; cursor: wait; }
     let html = '';
     for (let r = 0; r < rows; r++) for (let c = 0; c < COLS; c++)
       html += '<div class="cell-slot" data-col="' + c + '" data-row="' + r + '" style="grid-column:' + (c + 1) + ';grid-row:' + (r + 1) + '"></div>';
-    state.components.filter((c) => c.placed).forEach((comp) => {
+    activeComponents().filter((c) => c.placed).forEach((comp) => {
       html += '<div class="lb-item' + (comp.id === selectedId ? ' selected' : '') + '" data-id="' + comp.id + '" style="grid-column:' + ((comp.x || 0) + 1) + '/span ' + (comp.w || 2) + ';grid-row:' + ((comp.y || 0) + 1) + '/span ' + (comp.h || 1) + '">' +
         componentShell(comp) + '<div class="resize-handle" data-id="' + comp.id + '" title="Redimensionar"></div></div>';
     });
     g.innerHTML = html;
-    state.components.filter((c) => c.placed).forEach(renderComponent);
+    activeComponents().filter((c) => c.placed).forEach(renderComponent);
     updateEmptyHint();
   }
   function renderTray() {
     const wrap = $('#trayItems'); if (!wrap) return;
-    const unplaced = state.components.filter((c) => !c.placed);
+    const unplaced = activeComponents().filter((c) => !c.placed);
     if (!unplaced.length) {
       wrap.innerHTML = '<div class="tray-empty">Tudo no painel. Crie novos blocos com <strong>+ KPI</strong>, <strong>+ Gráfico</strong> ou <strong>+ Tabela</strong>.</div>';
       return;
@@ -1208,9 +1289,9 @@ button:disabled { opacity: .6; cursor: wait; }
       '<div class="tray-chip" data-id="' + c.id + '"><span class="chip-ic">' + typeIcon(c.type) + '</span><span class="chip-t">' + esc(c.title) + '</span><span class="chip-tag">' + typeLabel(c.type) + '</span></div>'
     ).join('');
   }
-  function refreshAll() { document.body.style.fontFamily = (state.theme && state.theme.fontFamily) || 'DM Sans'; state.components.filter((c) => c.placed).forEach(renderComponent); }
+  function refreshAll() { document.body.style.fontFamily = (state.theme && state.theme.fontFamily) || 'DM Sans'; activeComponents().filter((c) => c.placed).forEach(renderComponent); }
   function updateEmptyHint() {
-    const placed = state.components.filter((c) => c.placed).length;
+    const placed = activeComponents().filter((c) => c.placed).length;
     const hint = $('#emptyHint'); if (hint) hint.classList.toggle('hidden', placed > 0);
   }
   function selectId(id) {
@@ -1223,6 +1304,7 @@ button:disabled { opacity: .6; cursor: wait; }
     comp.placed = true;
   }
   function newComponent(comp) {
+    comp.pageId = state.activePageId;
     comp.placed = false;
     state.components.push(comp);
     save(); renderTray();
@@ -1365,6 +1447,7 @@ button:disabled { opacity: .6; cursor: wait; }
         state.columns = headers.map((h) => ({ name: h, type: detectType(json.map((r) => r[h])), description: '' }));
         state.meta = { fileName: file.name, size: file.size, type: ext, uploadDate: new Date().toISOString(), rowCount: json.length, colCount: headers.length };
         state.components = []; state.filters = [];
+        state.pages = [{ id: DEFAULT_PAGE_ID, name: 'Visão geral', topic: 'Visão geral' }]; state.activePageId = DEFAULT_PAGE_ID;
         state.theme = Object.assign({}, DEFAULT_THEME, { title: file.name.replace(/\.[^.]+$/, '') });
         showPreview();
       } catch (ex) { err.textContent = 'Erro ao ler o arquivo: ' + ex.message; }
@@ -1373,11 +1456,63 @@ button:disabled { opacity: .6; cursor: wait; }
     reader.readAsArrayBuffer(file);
   }
   const TYPE_BADGE = { numero: 'Número', moeda: 'Moeda', percentual: 'Percentual', data: 'Data', categoria: 'Categoria', texto: 'Texto' };
+  let renamingPageId = null;
+  function addPage(activateInEditor) {
+    ensurePages(); if (state.pages.length >= 8) return;
+    const names = new Set(state.pages.map((item) => item.name)); let number = 2; while (names.has('Aba ' + number)) number++;
+    const page = { id: pageUid(), name: 'Aba ' + number, topic: 'Aba ' + number };
+    state.pages.push(page);
+    if (activateInEditor) state.activePageId = page.id;
+    renderPagePlan(); renderDashboardTabs();
+    if (activateInEditor) { selectedId = null; layoutGrid(); renderTray(); renamingPageId = page.id; renderDashboardTabs(); requestAnimationFrame(() => { const input = $('[data-page-rename-input="' + page.id + '"]'); if (input) { input.focus(); input.select(); } }); }
+    save();
+  }
+  function removePage(pageId, askConfirmation) {
+    ensurePages(); if (state.pages.length <= 1) return;
+    const page = state.pages.find((item) => item.id === pageId); if (!page) return;
+    const componentCount = state.components.filter((component) => component.pageId === pageId).length;
+    if (askConfirmation && !confirm('Excluir a aba "' + page.name + '"' + (componentCount ? ' e seus ' + componentCount + ' componentes' : '') + '? Esta ação não pode ser desfeita.')) return;
+    const index = state.pages.indexOf(page);
+    state.pages = state.pages.filter((item) => item.id !== pageId);
+    state.components = state.components.filter((component) => component.pageId !== pageId);
+    if (state.activePageId === pageId) state.activePageId = state.pages[Math.min(index, state.pages.length - 1)].id;
+    if (renamingPageId === pageId) renamingPageId = null;
+    renderPagePlan(); renderDashboardTabs(); selectedId = null; layoutGrid(); renderTray(); save();
+  }
+  function renderPagePlan() {
+    ensurePages();
+    const count = $('#pagePlanCount'); if (count) count.textContent = state.pages.length + ' de 8 abas';
+    const add = $('#pagePlanAdd'); if (add) { add.disabled = state.pages.length >= 8; add.textContent = state.pages.length >= 8 ? 'Limite de 8 abas' : '＋ Adicionar aba'; }
+    const list = $('#pagePlanList'); if (!list) return;
+    list.innerHTML = state.pages.map((page, index) => '<div class="page-plan-item"><span class="page-plan-index" aria-hidden="true">' + String(index + 1).padStart(2, '0') + '</span><div class="page-plan-input-wrap"><label for="page-name-' + esc(page.id) + '">Nome da aba</label><input id="page-name-' + esc(page.id) + '" data-page-name="' + esc(page.id) + '" maxlength="60" value="' + esc(page.name) + '" aria-label="Nome da aba ' + (index + 1) + '" placeholder="Ex.: Desempenho comercial"></div><button class="page-remove-button" type="button" data-page-plan-delete="' + esc(page.id) + '" aria-label="Excluir aba ' + esc(page.name) + '" title="Excluir aba"' + (state.pages.length === 1 ? ' disabled' : '') + '>×</button></div>').join('');
+  }
+  function renderDashboardTabs() {
+    ensurePages();
+    const tabs = $('#dashboardTabs'); if (!tabs) return;
+    tabs.innerHTML = state.pages.map((page) => {
+      if (state.role !== 'viewer' && renamingPageId === page.id) return '<span class="dashboard-tab-rename"><input data-page-rename-input="' + esc(page.id) + '" maxlength="60" value="' + esc(page.name) + '" aria-label="Novo nome da aba"><button type="button" data-page-rename-save="' + esc(page.id) + '" aria-label="Salvar nome">✓</button><button type="button" data-page-rename-cancel aria-label="Cancelar">×</button></span>';
+      return '<span class="dashboard-tab-group"><button class="dashboard-tab" type="button" role="tab" aria-selected="' + (page.id === state.activePageId) + '" data-page-tab="' + esc(page.id) + '">' + esc(page.name) + '</button>' + (state.role === 'viewer' ? '' : '<button class="dashboard-tab-edit" type="button" data-page-edit="' + esc(page.id) + '" aria-label="Renomear aba ' + esc(page.name) + '" title="Renomear aba">✎</button><button class="dashboard-tab-delete" type="button" data-page-delete="' + esc(page.id) + '" aria-label="Excluir aba ' + esc(page.name) + '" title="Excluir aba"' + (state.pages.length === 1 ? ' disabled' : '') + '>×</button>') + '</span>';
+    }).join('') + (state.role !== 'viewer' ? '<button class="dashboard-tab-add" type="button" data-page-add' + (state.pages.length >= 8 ? ' disabled' : '') + '>＋ Nova aba</button>' : '');
+  }
+  function switchPage(pageId) {
+    if (!state.pages.some((page) => page.id === pageId) || pageId === state.activePageId) return;
+    state.activePageId = pageId; selectedId = null; renderDashboardTabs(); layoutGrid(); renderTray(); save();
+  }
+  function editPageName(pageId) {
+    const page = state.pages.find((item) => item.id === pageId); if (!page) return;
+    renamingPageId = pageId; renderDashboardTabs(); requestAnimationFrame(() => { const input = $('[data-page-rename-input="' + pageId + '"]'); if (input) { input.focus(); input.select(); } });
+  }
+  function savePageName(pageId) {
+    const page = state.pages.find((item) => item.id === pageId), input = $('[data-page-rename-input="' + pageId + '"]'); if (!page || !input) return;
+    const value = input.value.trim(); if (!value) { input.focus(); return; }
+    page.name = value.slice(0, 60); page.topic = page.name; renamingPageId = null; renderDashboardTabs(); renderPagePlan(); save();
+  }
   function showPreview() {
     $('#screen-upload').classList.add('hidden'); $('#screen-dashboard').classList.add('hidden'); $('#screen-preview').classList.remove('hidden'); syncIntakeModal();
     $('#previewMeta').innerHTML = '<strong>' + esc(state.meta.fileName) + '</strong> · ' + state.meta.rowCount + ' linhas · ' + state.meta.colCount + ' colunas · ' + (state.meta.size / 1024).toFixed(1) + ' KB';
     $('#tableDescription').value = state.meta.tableDescription || '';
     $('#analysisFocus').value = state.meta.analysisFocus || '';
+    renderPagePlan();
     $('#columnDescriptions').innerHTML = state.columns.map((c, i) => '<div class="context-column"><label title="' + esc(c.name) + '">' + esc(c.name) + ' <span class="type-badge" data-t="' + c.type + '">' + TYPE_BADGE[c.type] + '</span></label><input data-column-description="' + i + '" value="' + esc(c.description || '') + '" placeholder="Ex.: valor total da venda"></div>').join('');
     let html = '<div class="tbl-wrap"><table><thead><tr>' + state.columns.map((c) => '<th>' + esc(c.name) + '<span class="type-badge" data-t="' + c.type + '">' + TYPE_BADGE[c.type] + '</span></th>').join('') + '</tr></thead><tbody>';
     state.rows.slice(0, 8).forEach((r) => { html += '<tr>' + state.columns.map((c) => '<td>' + esc(r[c.name]) + '</td>').join('') + '</tr>'; });
@@ -1387,6 +1522,13 @@ button:disabled { opacity: .6; cursor: wait; }
     const tableDescription = $('#tableDescription');
     tableDescription.oninput = () => { state.meta.tableDescription = tableDescription.value; save(); };
     $('#analysisFocus').oninput = () => { state.meta.analysisFocus = $('#analysisFocus').value.slice(0, 320); save(); };
+    $('#pagePlanAdd').onclick = () => addPage(false);
+    $('#pagePlanList').oninput = (event) => {
+      const input = event.target.closest('[data-page-name]'); if (!input) return;
+      const page = state.pages.find((item) => item.id === input.dataset.pageName); if (!page) return;
+      page.name = input.value.slice(0, 60); page.topic = page.name; save();
+    };
+    $('#pagePlanList').onclick = (event) => { const button = event.target.closest('[data-page-plan-delete]'); if (button) removePage(button.dataset.pagePlanDelete, false); };
     $('#columnDescriptions').oninput = (e) => {
       const input = e.target.closest('[data-column-description]'); if (!input) return;
       const column = state.columns[Number(input.dataset.columnDescription)];
@@ -1394,10 +1536,11 @@ button:disabled { opacity: .6; cursor: wait; }
     };
   }
   function goToDashboard() {
+    ensurePages();
     $('#screen-preview').classList.add('hidden'); $('#screen-upload').classList.add('hidden'); $('#screen-dashboard').classList.remove('hidden'); syncIntakeModal();
     $('#dashFileName').textContent = state.meta.fileName;
     $('#screen-dashboard').classList.toggle('viewer', state.role === 'viewer');
-    layoutGrid(); renderTray(); renderFilterBar(); syncAiButtonState(); save(); notifyDashboardReady();
+    renderDashboardTabs(); layoutGrid(); renderTray(); renderFilterBar(); syncAiButtonState(); save(); notifyDashboardReady();
   }
 
   function syncAiButtonState() {
@@ -1412,12 +1555,22 @@ button:disabled { opacity: .6; cursor: wait; }
   function syncIntakeModal() {
     const open = !$('#screen-upload').classList.contains('hidden') || !$('#screen-preview').classList.contains('hidden');
     $('#intakeBackdrop').classList.toggle('open', open);
+    document.body.classList.toggle('intake-open', open);
+  }
+  function bindIntakeWheel(modal) {
+    if (!modal) return;
+    modal.addEventListener('wheel', (event) => {
+      if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY) || modal.scrollHeight <= modal.clientHeight) return;
+      const multiplier = event.deltaMode === 1 ? 20 : event.deltaMode === 2 ? modal.clientHeight : 1;
+      modal.scrollTop += event.deltaY * multiplier;
+      event.preventDefault();
+    }, { passive: false });
   }
   let aiLoadingStarted = 0, aiLoadingClock = null;
   function showAiLoading() {
     aiLoadingStarted = Date.now();
     if ($('#aiError')) $('#aiError').textContent = '';
-    $('#aiLoadingText').textContent = 'A IA está analisando a estrutura da base e escolhendo os melhores indicadores para o foco informado.';
+    $('#aiLoadingText').textContent = 'A IA está organizando assuntos, indicadores e visualizações para cada aba do relatório.';
     $('#aiLoadingTimer').textContent = 'Conectando à IA… 0s';
     clearInterval(aiLoadingClock);
     aiLoadingClock = setInterval(() => { $('#aiLoadingTimer').textContent = 'Aguardando retorno da IA… ' + Math.floor((Date.now() - aiLoadingStarted) / 1000) + 's'; }, 1000);
@@ -1503,21 +1656,21 @@ button:disabled { opacity: .6; cursor: wait; }
   function makeKpi(title, config) { return { type: 'kpi', title, config, w: 2, h: 1 }; }
   function buildKpis(analysis) {
     const result = [], metrics = analysis.metrics.slice(0, 3), primary = analysis.primary;
-    const addMetric = (profile, agg, label) => { if (profile) result.push(makeKpi(label + ' ' + profile.column.name, { mode: 'simples', column: profile.column.name, agg, format: fmtForCol(profile.column.name) })); };
+    const addMetric = (profile, agg, label) => { if (profile) result.push(makeKpi(label + ' ' + semanticColumnLabel(profile.column.name), { mode: 'simples', column: profile.column.name, agg, format: fmtForCol(profile.column.name) })); };
     if (primary) { addMetric(primary, metricAggregation(primary), 'Total de'); addMetric(primary, 'media', 'Média de'); addMetric(primary, 'max', 'Máximo de'); addMetric(primary, 'min', 'Mínimo de'); }
     const countColumn = analysis.count ? analysis.count.column.name : state.columns[0].name;
     result.push(makeKpi('Registros', { mode: 'simples', column: countColumn, agg: 'contagem', format: 'numero' }));
     if (metrics[1]) { addMetric(metrics[1], metricAggregation(metrics[1]), 'Total de'); addMetric(metrics[1], 'media', 'Média de'); }
     const category = analysis.category && analysis.category.column.name;
-    if (category && primary) result.push(makeKpi('Líder · ' + category, { mode: 'rotulo', labelColumn: category, rankColumn: primary.column.name, rankAgg: metricAggregation(primary), rankDir: 'maior' }));
-    else if (category) result.push(makeKpi('Categorias únicas', { mode: 'simples', column: category, agg: 'distinta', format: 'numero' }));
+    if (category && primary) result.push(makeKpi('Líder por ' + semanticColumnLabel(category), { mode: 'rotulo', labelColumn: category, rankColumn: primary.column.name, rankAgg: metricAggregation(primary), rankDir: 'maior' }));
+    else if (category) result.push(makeKpi('Quantidade de ' + semanticColumnLabel(category), { mode: 'simples', column: category, agg: 'distinta', format: 'numero' }));
     // Garante 3 indicadores mesmo em bases com poucas métricas numéricas.
     const fallbackColumn = (analysis.count && analysis.count.column) || state.columns[0];
     let n = 0;
     let guard = 0;
     while (result.length < 3 && state.columns.length && guard++ < 20) {
       const c = state.columns[n++ % state.columns.length];
-      if (!result.some((k) => k.config.column === c.name && k.config.agg === 'distinta') || guard > state.columns.length) result.push(makeKpi('Valores únicos · ' + c.name, { mode: 'simples', column: c.name, agg: 'distinta', format: 'numero' }));
+      if (!result.some((k) => k.config.column === c.name && k.config.agg === 'distinta') || guard > state.columns.length) result.push(makeKpi('Quantidade de ' + semanticColumnLabel(c.name), { mode: 'simples', column: c.name, agg: 'distinta', format: 'numero' }));
     }
     if (result.length > 3) result.length = 3;
     return result;
@@ -1533,22 +1686,22 @@ button:disabled { opacity: .6; cursor: wait; }
   function chartFallbacks(analysis) {
     const p = analysis.primary, s = analysis.secondary, cat = analysis.category || (state.columns.find((c) => c.type === 'categoria' || c.type === 'texto') ? { column: state.columns.find((c) => c.type === 'categoria' || c.type === 'texto') } : null), date = analysis.date, out = [];
     const add = (title, config) => { if (chartIsUseful(config) && !out.some((c) => c.config.x === config.x && c.config.y === config.y && c.config.type === config.type)) out.push({ type: 'chart', title, config }); };
-    if (date && p) add(p.column.name + ' por período', { type: 'line', x: date.column.name, y: p.column.name, agg: metricAggregation(p), dateGroup: 'mes' });
-    if (cat && p) add(p.column.name + ' por ' + cat.column.name, { type: 'column', x: cat.column.name, y: p.column.name, agg: metricAggregation(p), dateGroup: 'mes' });
-    if (cat && s) add(s.column.name + ' por ' + cat.column.name, { type: 'bar', x: cat.column.name, y: s.column.name, agg: metricAggregation(s), dateGroup: 'mes' });
-    if (cat) add('Distribuição por ' + cat.column.name, { type: 'pie', x: cat.column.name, agg: 'contagem', dateGroup: 'mes' });
-    if (cat && p) ['media', 'max', 'min'].forEach((agg) => add(agg.toUpperCase() + ' de ' + p.column.name + ' por ' + cat.column.name, { type: 'column', x: cat.column.name, y: p.column.name, agg, dateGroup: 'mes' }));
+    if (date && p) add(titleText(semanticColumnLabel(p.column.name)) + ' por período', { type: 'line', x: date.column.name, y: p.column.name, agg: metricAggregation(p), dateGroup: 'mes' });
+    if (cat && p) add(titleText(semanticColumnLabel(p.column.name)) + ' por ' + semanticColumnLabel(cat.column.name), { type: 'column', x: cat.column.name, y: p.column.name, agg: metricAggregation(p), dateGroup: 'mes' });
+    if (cat && s) add(titleText(semanticColumnLabel(s.column.name)) + ' por ' + semanticColumnLabel(cat.column.name), { type: 'bar', x: cat.column.name, y: s.column.name, agg: metricAggregation(s), dateGroup: 'mes' });
+    if (cat) add('Distribuição por ' + semanticColumnLabel(cat.column.name), { type: 'pie', x: cat.column.name, agg: 'contagem', dateGroup: 'mes' });
+    if (cat && p) ['media', 'max', 'min'].forEach((agg) => add(({ media: 'Média', max: 'Máximo', min: 'Mínimo' })[agg] + ' de ' + semanticColumnLabel(p.column.name) + ' por ' + semanticColumnLabel(cat.column.name), { type: 'column', x: cat.column.name, y: p.column.name, agg, dateGroup: 'mes' }));
     return out;
   }
-  function fixedDashboard(aiItems, analysis) {
+  function fixedDashboard(aiItems, analysis, pageId) {
     const aiCharts = aiItems.filter((c) => c.type === 'chart' && chartIsUseful(c.config || {})).slice(0, 4);
     const chartsToUse = aiCharts.concat(chartFallbacks(analysis)).filter((c, i, a) => a.findIndex((x) => x.config.x === c.config.x && x.config.y === c.config.y && x.config.type === c.config.type) === i).slice(0, 4);
     const fallbacks = chartFallbacks(analysis);
     while (chartsToUse.length < 4 && fallbacks.length) { const c = fallbacks.shift(); if (!chartsToUse.some((x) => x.config.x === c.config.x && x.config.y === c.config.y && x.config.type === c.config.type)) chartsToUse.push(c); }
     const chosen = buildKpis(analysis).concat(chartsToUse);
-    chosen.push({ type: 'table', title: 'Principais registros', config: { columns: state.columns.slice(0, 6).map((c) => c.name), sortBy: analysis.primary ? analysis.primary.column.name : '', limit: 8 } });
+    chosen.push({ type: 'table', title: 'Detalhamento dos principais registros', config: { columns: state.columns.slice(0, 6).map((c) => c.name), sortBy: analysis.primary ? analysis.primary.column.name : '', limit: 8 } });
     // Grade fixa: 1 linha de KPIs, 4 linhas de gráficos (3x2 cada) e 2 linhas de tabela.
-    chosen.forEach((c, i) => { c.id = uid(); c.placed = true; c.createdAt = new Date().toISOString(); });
+    chosen.forEach((c) => { c.id = uid(); c.pageId = pageId || state.activePageId; c.placed = true; c.createdAt = new Date().toISOString(); });
     const kpis = chosen.filter((c) => c.type === 'kpi'), chartsList = chosen.filter((c) => c.type === 'chart'), table = chosen.find((c) => c.type === 'table');
     kpis.forEach((c, i) => { c.x = i * 2; c.y = 0; c.w = 2; c.h = 1; });
     chartsList.forEach((c, i) => { const pos = [{ x: 0, y: 1, w: 3 }, { x: 3, y: 1, w: 3 }, { x: 0, y: 3, w: 3 }, { x: 3, y: 3, w: 3 }][i]; if (pos) Object.assign(c, pos, { h: 2 }); });
@@ -1559,9 +1712,9 @@ button:disabled { opacity: .6; cursor: wait; }
     if (!state.columns.length) { alert('Envie uma planilha primeiro.'); return; }
     if (state.components.length && !skipConfirm && !confirm('O sistema vai recriar o painel automaticamente, substituindo os componentes atuais. Continuar?')) return;
     applyDashboardTheme(null);
-    const chosen = fixedDashboard([], buildColumnAnalysis());
+    const chosen = state.pages.flatMap((page) => fixedDashboard([], buildColumnAnalysis(), page.id));
     state.components = chosen; selectedId = null; save(); layoutGrid(); renderTray();
-    const t = $('#saveStatus'); if (t) { t.textContent = '✨ Painel montado com 3 indicadores em 7 linhas'; t.classList.add('show'); clearTimeout(saveTimer); saveTimer = setTimeout(() => t.classList.remove('show'), 2800); }
+    const t = $('#saveStatus'); if (t) { t.textContent = '✨ ' + state.pages.length + (state.pages.length === 1 ? ' aba montada' : ' abas montadas') + ' com indicadores relacionados'; t.classList.add('show'); clearTimeout(saveTimer); saveTimer = setTimeout(() => t.classList.remove('show'), 2800); }
   }
 
   function randomHex() { return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0'); }
@@ -1581,6 +1734,7 @@ button:disabled { opacity: .6; cursor: wait; }
       ...(state.meta.tableDescription && state.meta.tableDescription.trim() ? { description: state.meta.tableDescription.trim().slice(0, 400) } : {}),
       ...(state.meta.analysisFocus && state.meta.analysisFocus.trim() ? { focus: state.meta.analysisFocus.trim().slice(0, 320) } : {}),
       rowCount: state.meta.rowCount || state.rows.length,
+      pages: state.pages.map((page) => ({ id: page.id, name: page.name || 'Sem título' })),
       columns: state.columns.map((c) => Object.assign({ name: c.name, type: c.type }, c.description && c.description.trim() ? { description: c.description.trim().slice(0, 120) } : {})),
       sample: state.rows.slice(0, 3).map((row) => Object.fromEntries(state.columns.map((c) => [c.name, String(row[c.name] == null ? '' : row[c.name]).slice(0, 45)])))
     };
@@ -1596,7 +1750,7 @@ button:disabled { opacity: .6; cursor: wait; }
       return { type: c.type, title: String(c.title || 'Componente').slice(0, 100), config: cfg, w: Math.min(Math.max(Number(c.w) || 2, 2), COLS), h: Math.min(Math.max(Number(c.h) || 1, 1), 3) };
     }).filter(Boolean);
   }
-  function arrangeAiDashboard(items) {
+  function arrangeAiDashboard(items, pageId) {
     const kpis = items.filter((c) => c.type === 'kpi').slice(0, 3);
     const charts = items.filter((c) => c.type === 'chart' && chartIsUseful(c.config || {})).slice(0, 4);
     const table = items.find((c) => c.type === 'table');
@@ -1604,10 +1758,10 @@ button:disabled { opacity: .6; cursor: wait; }
     // caso, preservamos os componentes válidos e completamos o painel com
     // sugestões locais, sem consumir outra chamada à IA.
     if (kpis.length !== 3 || charts.length !== 4 || !table) {
-      return fixedDashboard(items, buildColumnAnalysis());
+      return fixedDashboard(items, buildColumnAnalysis(), pageId);
     }
     const chosen = kpis.concat(charts, table);
-    chosen.forEach((component) => { component.id = uid(); component.placed = true; component.createdAt = new Date().toISOString(); });
+    chosen.forEach((component) => { component.id = uid(); component.pageId = pageId; component.placed = true; component.createdAt = new Date().toISOString(); });
     kpis.forEach((component, i) => Object.assign(component, { x: i * 2, y: 0, w: 2, h: 1 }));
     charts.forEach((component, i) => Object.assign(component, [{ x: 0, y: 1, w: 3, h: 2 }, { x: 3, y: 1, w: 3, h: 2 }, { x: 0, y: 3, w: 3, h: 2 }, { x: 3, y: 3, w: 3, h: 2 }][i]));
     Object.assign(table, { x: 0, y: 5, w: 6, h: 2 });
@@ -1615,6 +1769,7 @@ button:disabled { opacity: .6; cursor: wait; }
   }
   async function autoBuild(fromIntake = false) {
     if (!state.columns.length) { alert('Envie uma planilha primeiro.'); return; }
+    ensurePages();
     if (aiBusy || (state.meta && state.meta.aiGenerated)) {
       const statusAlready = $('#saveStatus');
       if (statusAlready) { statusAlready.textContent = 'Este dashboard já foi montado pela IA. Troque a base para gerar novamente.'; statusAlready.classList.add('show'); }
@@ -1629,15 +1784,20 @@ button:disabled { opacity: .6; cursor: wait; }
     try {
       await new Promise((resolve) => requestAnimationFrame(resolve));
       const aiController = new AbortController();
-      const aiTimer = setTimeout(() => aiController.abort(), 35000);
+      const aiTimer = setTimeout(() => aiController.abort(), 75000);
       const response = await fetch('/api/ai/dashboard', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiInput()), signal: aiController.signal });
       clearTimeout(aiTimer);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Não foi possível usar a IA.');
-      const chosen = arrangeAiDashboard(validAiComponents(data.components || []));
+      const returnedPages = Array.isArray(data.pages) ? data.pages : [{ id: state.pages[0].id, components: data.components || [] }];
+      const chosen = state.pages.flatMap((page, index) => {
+        const generated = returnedPages.find((item) => item && item.id === page.id) || returnedPages[index] || {};
+        if (generated.topic) page.topic = String(generated.topic).slice(0, 120);
+        return arrangeAiDashboard(validAiComponents(Array.isArray(generated.components) ? generated.components : []), page.id);
+      });
       applyDashboardTheme(data.theme);
-      state.components = chosen; selectedId = null; state.meta.aiGenerated = true; aiSucceeded = true; save(); layoutGrid(); renderTray();
-      if (status) { status.textContent = '✨ Painel criado pela IA'; clearTimeout(saveTimer); saveTimer = setTimeout(() => status.classList.remove('show'), 3200); }
+      state.components = chosen; state.activePageId = state.pages[0].id; selectedId = null; state.meta.aiGenerated = true; aiSucceeded = true; save(); renderDashboardTabs(); layoutGrid(); renderTray();
+      if (status) { status.textContent = '✨ Relatório criado pela IA com ' + state.pages.length + (state.pages.length === 1 ? ' aba' : ' abas'); clearTimeout(saveTimer); saveTimer = setTimeout(() => status.classList.remove('show'), 3200); }
     } catch (error) {
       console.warn('[LiteBI] IA indisponível:', error);
       const message = error && error.name === 'AbortError' ? 'A IA demorou mais que o esperado. Tente novamente.' : (error.message || 'Não foi possível gerar o dashboard com a IA.');
@@ -1865,8 +2025,9 @@ button:disabled { opacity: .6; cursor: wait; }
     } catch (_) { alert('Não foi possível preparar o arquivo para exportação. Tente novamente.'); }
   }
   function buildExportHtml(theme, brandLogo) {
+    ensurePages();
     const appUrl = location.origin;
-    const payload = { columns: state.columns, rows: state.rows, components: state.components, filters: state.filters, theme, meta: state.meta, appUrl, brandLogo };
+    const payload = { columns: state.columns, rows: state.rows, components: state.components, filters: state.filters, pages: state.pages, theme, meta: state.meta, appUrl, brandLogo };
     const data = JSON.stringify(payload).replace(/</g, '\\u003c');
     const runtime = LITEBI_RUNTIME.toString();
     return '<!DOCTYPE html>\n<html lang="pt-BR"><head><meta charset="UTF-8">' +
@@ -1892,24 +2053,30 @@ button:disabled { opacity: .6; cursor: wait; }
     '.dash-header h1{position:relative;z-index:1;margin:0;max-width:900px;font-size:clamp(28px,4vw,44px);line-height:1.08;font-weight:800;letter-spacing:-.04em}' +
     '.dash-header h2{position:relative;z-index:1;margin:12px 0 0;max-width:760px;font-size:clamp(15px,2vw,19px);line-height:1.45;font-weight:500;opacity:.92}' +
     '.dash-header p{position:relative;z-index:1;margin:20px 0 0;font-size:12px;line-height:1.4;opacity:.78}' +
+    '.report-tabs{position:sticky;top:0;z-index:20;display:flex;gap:6px;max-width:1280px;margin:0 auto;padding:10px 20px;background:rgba(244,246,249,.92);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:thin;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}' +
+    '.report-tab{flex:0 0 auto;min-height:40px;padding:9px 15px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--soft);font:inherit;font-size:12px;font-weight:750;cursor:pointer;white-space:nowrap;transition:background-color .16s ease,color .16s ease,border-color .16s ease}' +
+    '.report-tab:hover{background:var(--surface);color:var(--text);border-color:var(--border)}.report-tab[aria-selected=true]{background:var(--surface);color:var(--c1);border-color:rgba(94,159,232,.26);box-shadow:0 1px 3px rgba(16,24,40,.06)}.report-tab:focus-visible{outline:3px solid color-mix(in srgb,var(--c1) 35%,transparent);outline-offset:2px}' +
     '.board{max-width:1280px;margin:0 auto;padding:28px 20px 54px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px;grid-auto-rows:148px}' +
     '.cell{position:relative;grid-column:var(--x)/span var(--w);grid-row:var(--y)/span var(--h);min-width:0;background:rgba(255,255,255,.94);border:1px solid rgba(16,24,40,.08);border-radius:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;transition:transform .2s ease,box-shadow .2s ease}' +
     '.cell:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(16,24,40,.1)}' +
     '.cell-head{display:flex;align-items:center;min-height:48px;padding:14px 18px;font-size:12px;font-weight:750;letter-spacing:.01em;color:#344054;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#fff,var(--surface-soft))}' +
     '.cell-body{flex:1;padding:16px 18px;min-height:0;overflow:auto;display:flex;flex-direction:column}' +
+    '.cell-body.table-body{padding:0;overflow:hidden}' +
+    '.table-scroll{width:100%;height:100%;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}' +
     '.cell-body canvas{flex:1;min-height:0;max-height:100%;}' +
     '.kpi-v{font-size:clamp(25px,3.2vw,38px);font-weight:800;letter-spacing:-.045em;line-height:1;margin:auto 0 7px;color:var(--c1)}' +
     '.kpi-v.txt{font-size:clamp(17px,2vw,27px);line-height:1.15;word-break:break-word}' +
     '.kpi-s{font-size:11px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
-    'table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}th{position:sticky;top:0;background:var(--surface-soft);color:var(--soft);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;z-index:1}tbody tr:hover{background:#f8fbff}tbody tr:last-child td{border-bottom:0}' +
+    'table{width:100%;min-width:max-content;border-collapse:separate;border-spacing:0;font-size:12px}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}th{position:static;background:var(--surface-soft);color:var(--soft);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}tbody tr:hover{background:#f8fbff}tbody tr:last-child td{border-bottom:0}' +
     '.foot{max-width:1280px;margin:0 auto;padding:0 20px 38px;color:var(--muted);font-size:11px;text-align:right}' +
-    '@media(max-width:760px){.dash-header{padding:76px 22px 36px}.litebi-home{top:18px;right:18px}.board{grid-template-columns:1fr;grid-auto-rows:190px;gap:12px;padding:18px 14px 38px}.cell{grid-column:1/-1!important;grid-row:auto!important;min-height:190px}.cell-body{padding:14px}.foot{padding:0 14px 28px}}' +
+    '@media(max-width:760px){.dash-header{padding:76px 22px 36px}.litebi-home{top:18px;right:18px}.report-tabs{padding:8px 14px}.report-tab{min-height:38px;padding:8px 12px}.board{grid-template-columns:1fr;grid-auto-rows:190px;gap:12px;padding:18px 14px 38px}.cell{grid-column:1/-1!important;grid-row:auto!important;min-height:190px}.cell-body{padding:14px}.cell-body.table-body{padding:0}.foot{padding:0 14px 28px}}' +
     '@media(prefers-reduced-motion:reduce){.cell{transition:none}.cell:hover{transform:none}}';
 
   // ---------- Runtime self-contained do dashboard exportado ----------
   function LITEBI_RUNTIME() {
     var D = window.__LITEBI__ || {};
-    var cols = D.columns || [], rows = D.rows || [], comps = D.components || [], filters = D.filters || [], theme = D.theme || {}, meta = D.meta || {}, appUrl = D.appUrl || '/', brandLogo = D.brandLogo || (appUrl.replace(/\/$/, '') + '/logo.png');
+    var cols = D.columns || [], rows = D.rows || [], comps = D.components || [], filters = D.filters || [], pages = Array.isArray(D.pages) && D.pages.length ? D.pages.slice(0, 8) : [{ id: 'page-overview', name: 'Visão geral' }], theme = D.theme || {}, meta = D.meta || {}, appUrl = D.appUrl || '/', brandLogo = D.brandLogo || (appUrl.replace(/\/$/, '') + '/logo.png');
+    comps.forEach(function (component) { if (!component.pageId) component.pageId = pages[0].id; });
     var c1 = theme.color1 || '#5e9fe8', c2 = theme.color2 || '#72bc8f';
     document.body.style.fontFamily = theme.fontFamily || 'DM Sans';
     document.documentElement.style.setProperty('--c1', c1);
@@ -1918,6 +2085,7 @@ button:disabled { opacity: .6; cursor: wait; }
     function pN(v) { if (v == null || v === '') return null; if (typeof v === 'number') return isFinite(v) ? v : null; var s = String(v).trim().replace(/[R$\u20ac\u00a3%\s]/g, ''); if (/,\d{1,2}$/.test(s) && s.indexOf('.') > -1) s = s.replace(/\./g, '').replace(',', '.'); else if (/,/.test(s) && !/\./.test(s)) s = s.replace(',', '.'); else s = s.replace(/,/g, ''); var n = parseFloat(s); return isFinite(n) ? n : null; }
     function pD(v) { if (v == null || v === '') return null; var s = String(v).trim(); var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/); if (m) { var d = new Date(+(+m[3] < 100 ? 2000 + +m[3] : m[3]), +m[2] - 1, +m[1]); return isNaN(d) ? null : d; } var d2 = new Date(s); return isNaN(d2) ? null : d2; }
     function colT(name) { for (var i = 0; i < cols.length; i++) if (cols[i].name === name) return cols[i].type; return 'texto'; }
+    function colLabel(name) { var col = null; for (var i = 0; i < cols.length; i++) if (cols[i].name === name) { col = cols[i]; break; } var described = col && String(col.description || '').trim().replace(/[.!?]+$/, ''); if (described) return described.charAt(0).toLowerCase() + described.slice(1); var key = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''); var phrases = { home_goals: 'gols do mandante', away_goals: 'gols do visitante', total_goals: 'gols da partida', home_team: 'time mandante', away_team: 'time visitante', total_sales: 'vendas totais', total_revenue: 'faturamento total', profit_margin: 'margem de lucro' }; if (phrases[key]) return phrases[key]; var words = { home: 'mandante', away: 'visitante', goals: 'gols', goal: 'gol', team: 'time', sales: 'vendas', revenue: 'receita', profit: 'lucro', margin: 'margem', amount: 'valor', quantity: 'quantidade', count: 'quantidade', price: 'preço', cost: 'custo', customer: 'cliente', product: 'produto', order: 'pedido', date: 'data', category: 'categoria', region: 'região', name: 'nome', total: 'total', average: 'média', avg: 'média' }; return key.split('_').map(function (word) { return words[word] || word; }).join(' '); }
     function isNum(t) { return t === 'numero' || t === 'moeda' || t === 'percentual'; }
     function aff(rs) { if (!filters.length) return rs; return rs.filter(function (row) { return filters.every(function (f) { var raw = row[f.column], t = colT(f.column); if (isNum(t)) { var n = pN(raw); if (n == null) return false; if (f.op === 'between') return n >= pN(f.value) && n <= pN(f.value2); if (f.op === 'gte') return n >= pN(f.value); if (f.op === 'lte') return n <= pN(f.value); if (f.op === 'eq') return n === pN(f.value); } else if (t === 'data') { var d = pD(raw); if (!d) return false; if (f.op === 'between') return d >= pD(f.value) && d <= pD(f.value2); if (f.op === 'gte') return d >= pD(f.value); if (f.op === 'lte') return d <= pD(f.value); } else { if (f.op === 'eq') return String(raw) === String(f.value); if (f.op === 'contains') return String(raw || '').toLowerCase().indexOf(String(f.value).toLowerCase()) > -1; } return true; }); }); }
     function agg(rs, c, a) { var nums = rs.map(function (r) { return pN(r[c]); }).filter(function (n) { return n != null; }); if (a === 'soma') return nums.reduce(function (x, y) { return x + y; }, 0); if (a === 'media') return nums.length ? nums.reduce(function (x, y) { return x + y; }, 0) / nums.length : 0; if (a === 'max') return nums.length ? Math.max.apply(null, nums) : 0; if (a === 'min') return nums.length ? Math.min.apply(null, nums) : 0; if (a === 'contagem') return rs.filter(function (r) { return r[c] != null && r[c] !== ''; }).length; if (a === 'distinta') { var set = {}; rs.forEach(function (r) { var v = String(r[c]); if (v !== '' && v !== 'null') set[v] = 1; }); return Object.keys(set).length; } return 0; }
@@ -1928,15 +2096,19 @@ button:disabled { opacity: .6; cursor: wait; }
     function pal(n) { if (n <= 1) return [c1]; var o = []; for (var i = 0; i < n; i++) o.push(lerp(c1, c2, i / (n - 1))); return o; }
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
     function kpiLabel(cfg) { var rs = aff(rows), groups = {}, order = []; for (var i = 0; i < rs.length; i++) { var key = rs[i][cfg.labelColumn]; if (key == null || key === '') continue; var k = String(key); if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(rs[i]); } if (!order.length) return '\u2014'; var best = null, bestVal = null; for (var j = 0; j < order.length; j++) { var kk = order[j], val = cfg.rankColumn ? agg(groups[kk], cfg.rankColumn, cfg.rankAgg || 'soma') : groups[kk].length; if (bestVal == null || (cfg.rankDir === 'menor' ? val < bestVal : val > bestVal)) { bestVal = val; best = kk; } } return best == null ? '\u2014' : best; }
-    function sub(cfg) { if (cfg.mode === 'rotulo') { var dir = cfg.rankDir === 'menor' ? 'Menor' : 'Maior'; var base = cfg.rankColumn ? (dir + ' ' + (cfg.rankAgg || 'soma') + ' de ' + cfg.rankColumn) : 'Mais frequente'; return base + ' \u00b7 por ' + cfg.labelColumn; } if (cfg.mode === 'diferenca') return cfg.column + ' \u2212 ' + cfg.column2; if (cfg.mode === 'reducao') return 'Redu\u00e7\u00e3o % (' + cfg.column + ' \u2192 ' + cfg.column2 + ')'; if (cfg.mode === 'crescimento') return 'Crescimento % (' + cfg.column + ' \u2192 ' + cfg.column2 + ')'; return (cfg.agg || '').toUpperCase() + ' de ' + cfg.column; }
+    function sub(cfg) { if (cfg.mode === 'rotulo') { var dir = cfg.rankDir === 'menor' ? 'Menor' : 'Maior'; var base = cfg.rankColumn ? (dir + ' ' + (cfg.rankAgg || 'soma') + ' de ' + colLabel(cfg.rankColumn)) : 'Mais frequente'; return base + ' \u00b7 por ' + colLabel(cfg.labelColumn); } if (cfg.mode === 'diferenca') return colLabel(cfg.column) + ' \u2212 ' + colLabel(cfg.column2); if (cfg.mode === 'reducao') return 'Redu\u00e7\u00e3o % (' + colLabel(cfg.column) + ' \u2192 ' + colLabel(cfg.column2) + ')'; if (cfg.mode === 'crescimento') return 'Crescimento % (' + colLabel(cfg.column) + ' \u2192 ' + colLabel(cfg.column2) + ')'; return (cfg.agg || '').toUpperCase() + ' de ' + colLabel(cfg.column); }
 
     var root = document.getElementById('dash-root');
     var when = meta.uploadDate ? new Date(meta.uploadDate).toLocaleDateString('pt-BR') : '';
     var logo = theme.logoData ? '<img class="dash-logo" src="' + esc(theme.logoData) + '" width="44" height="44" alt="Logo da empresa">' : '';
-    root.innerHTML = '<div class="dash-header"><a class="litebi-home" data-litebi-home href="' + esc(appUrl) + '" target="_blank" rel="noopener noreferrer" aria-label="Ir para o LiteBI" title="Ir para o LiteBI"><img src="' + esc(brandLogo) + '" width="28" height="28" alt=""></a>' + logo + '<span class="eyebrow">LITEBI · ANALYTICS</span><h1>' + esc(theme.title) + '</h1>' + (theme.subtitle ? '<h2>' + esc(theme.subtitle) + '</h2>' : '') + '<p>Gerado pelo LiteBI' + (meta.fileName ? ' \u00b7 fonte: ' + esc(meta.fileName) : '') + ' \u00b7 ' + new Date().toLocaleString('pt-BR') + '</p></div><div class="board" id="board"></div><div class="foot">' + (meta.rowCount || rows.length) + ' registros analisados.</div>';
+    root.innerHTML = '<div class="dash-header"><a class="litebi-home" data-litebi-home href="' + esc(appUrl) + '" target="_blank" rel="noopener noreferrer" aria-label="Ir para o LiteBI" title="Ir para o LiteBI"><img src="' + esc(brandLogo) + '" width="28" height="28" alt=""></a>' + logo + '<span class="eyebrow">LITEBI · ANALYTICS</span><h1>' + esc(theme.title) + '</h1>' + (theme.subtitle ? '<h2>' + esc(theme.subtitle) + '</h2>' : '') + '<p>Gerado pelo LiteBI' + (meta.fileName ? ' \u00b7 fonte: ' + esc(meta.fileName) : '') + ' \u00b7 ' + new Date().toLocaleString('pt-BR') + '</p></div><nav class="report-tabs" id="report-tabs" role="tablist" aria-label="Seções do relatório">' + pages.map(function (page, index) { return '<button class="report-tab" type="button" role="tab" aria-selected="' + (index === 0) + '" data-report-page="' + esc(page.id) + '">' + esc(page.name || ('Aba ' + (index + 1))) + '</button>'; }).join('') + '</nav><div class="board" id="board" role="tabpanel"></div><div class="foot">' + (meta.rowCount || rows.length) + ' registros analisados.</div>';
     var board = document.getElementById('board');
+    var chartInstances = [];
 
-    comps.forEach(function (comp) {
+    function renderPage(pageId) {
+      chartInstances.forEach(function (chart) { chart.destroy(); }); chartInstances = []; board.innerHTML = '';
+      Array.prototype.forEach.call(document.querySelectorAll('[data-report-page]'), function (tab) { tab.setAttribute('aria-selected', String(tab.getAttribute('data-report-page') === pageId)); });
+      comps.filter(function (component) { return component.pageId === pageId; }).forEach(function (comp) {
       var cell = document.createElement('div');
       cell.className = 'cell';
       cell.style.setProperty('--x', (comp.x || 0) + 1); cell.style.setProperty('--y', (comp.y || 0) + 1);
@@ -1949,22 +2121,27 @@ button:disabled { opacity: .6; cursor: wait; }
         var kcls = comp.config.mode === 'rotulo' ? ' txt' : '';
         body.innerHTML = '<div class="kpi-v' + kcls + '">' + kdisp + '</div><div class="kpi-s">' + esc(sub(comp.config)) + '</div>';
       } else if (comp.type === 'table') {
+        body.classList.add('table-body');
         var cfg = comp.config, tcols = (cfg.columns && cfg.columns.length) ? cfg.columns : cols.slice(0, 4).map(function (c) { return c.name; });
         var rs = aff(rows).slice();
         if (cfg.sortBy) { var st = colT(cfg.sortBy); rs.sort(function (a, z) { return isNum(st) ? (pN(z[cfg.sortBy]) || 0) - (pN(a[cfg.sortBy]) || 0) : String(a[cfg.sortBy]).localeCompare(String(z[cfg.sortBy])); }); }
         rs = rs.slice(0, cfg.limit || 10);
-        body.innerHTML = '<table><thead><tr>' + tcols.map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' + rs.map(function (r) { return '<tr>' + tcols.map(function (c) { return '<td>' + esc(r[c]) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+        body.innerHTML = '<div class="table-scroll"><table><thead><tr>' + tcols.map(function (c) { return '<th>' + esc(colLabel(c)) + '</th>'; }).join('') + '</tr></thead><tbody>' + rs.map(function (r) { return '<tr>' + tcols.map(function (c) { return '<td>' + esc(r[c]) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
       } else if (comp.type === 'chart') {
         var cv = document.createElement('canvas'); body.appendChild(cv);
         var g = grp(comp.config), isLine = comp.config.type === 'line';
         var colors = comp.config.type === 'pie' ? pal(g.labels.length) : c1;
-        new Chart(cv.getContext('2d'), {
+        chartInstances.push(new Chart(cv.getContext('2d'), {
           type: comp.config.type === 'column' ? 'bar' : comp.config.type,
-          data: { labels: g.labels, datasets: [{ label: comp.config.y || 'Contagem', data: g.values, backgroundColor: colors, borderColor: c1, borderWidth: 2, fill: false, tension: 0.3, pointRadius: isLine ? 3 : 0 }] },
+          data: { labels: g.labels, datasets: [{ label: comp.config.y ? colLabel(comp.config.y) : 'Contagem', data: g.values, backgroundColor: colors, borderColor: c1, borderWidth: 2, fill: false, tension: 0.3, pointRadius: isLine ? 3 : 0 }] },
           options: { indexAxis: comp.config.type === 'bar' ? 'y' : 'x', responsive: true, maintainAspectRatio: false, animation: { duration: 650, easing: 'easeOutQuart' }, interaction: { intersect: false, mode: 'index' }, plugins: { legend: { display: comp.config.type === 'pie', position: 'bottom', labels: { usePointStyle: true, padding: 16 } }, tooltip: { backgroundColor: '#172033', padding: 12, cornerRadius: 10, displayColors: comp.config.type === 'pie' } }, scales: comp.config.type === 'pie' ? {} : { x: { grid: { display: false }, ticks: { autoSkip: true, maxRotation: 0, color: '#667085', font: { size: 10 } } }, y: { beginAtZero: true, grid: { color: 'rgba(16,24,40,.07)' }, ticks: { color: '#667085', font: { size: 10 } } } } }
-        });
+        }));
       }
-    });
+      });
+    }
+    document.getElementById('report-tabs').addEventListener('click', function (event) { var tab = event.target.closest('[data-report-page]'); if (tab) renderPage(tab.getAttribute('data-report-page')); });
+    document.getElementById('report-tabs').addEventListener('keydown', function (event) { if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return; var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-report-page]')), current = tabs.indexOf(document.activeElement); if (current < 0) return; event.preventDefault(); var next = tabs[(current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length]; next.focus(); next.click(); });
+    renderPage(pages[0].id);
   }
 
   // ============================================================
@@ -1974,7 +2151,7 @@ button:disabled { opacity: .6; cursor: wait; }
     const viewer = state.role === 'viewer';
     $('#dashboardActions').classList.toggle('viewer', viewer);
     $('#screen-dashboard').classList.toggle('viewer', viewer);
-    selectId(null); layoutGrid(); renderTray();
+    selectId(null); renderDashboardTabs(); layoutGrid(); renderTray();
   }
 
   // ============================================================
@@ -1982,6 +2159,7 @@ button:disabled { opacity: .6; cursor: wait; }
   // ============================================================
   function bind() {
     const drop = $('#dropzone'), input = $('#fileInput');
+    bindIntakeWheel($('#screen-upload')); bindIntakeWheel($('#screen-preview'));
     drop.onclick = () => input.click();
     drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('drag'); };
     drop.ondragleave = () => drop.classList.remove('drag');
@@ -2005,6 +2183,19 @@ button:disabled { opacity: .6; cursor: wait; }
     $('#btnExport').onclick = doExport;
     $('#btnNewBase').onclick = () => { if (confirm('Começar um novo dashboard e descartar a base atual?')) { resetBuilder(); } };
     $('#roleSelect').onchange = (e) => { state.role = e.target.value; save(); applyRole(); };
+    $('#dashboardTabs').addEventListener('click', (event) => {
+      const add = event.target.closest('[data-page-add]'); if (add) { addPage(true); return; }
+      const remove = event.target.closest('[data-page-delete]'); if (remove) { removePage(remove.dataset.pageDelete, true); return; }
+      const saveName = event.target.closest('[data-page-rename-save]'); if (saveName) { savePageName(saveName.dataset.pageRenameSave); return; }
+      if (event.target.closest('[data-page-rename-cancel]')) { renamingPageId = null; renderDashboardTabs(); return; }
+      const tab = event.target.closest('[data-page-tab]'); if (tab) { switchPage(tab.dataset.pageTab); return; }
+      const edit = event.target.closest('[data-page-edit]'); if (edit) editPageName(edit.dataset.pageEdit);
+    });
+    $('#dashboardTabs').addEventListener('keydown', (event) => {
+      const input = event.target.closest('[data-page-rename-input]'); if (!input) return;
+      if (event.key === 'Enter') { event.preventDefault(); savePageName(input.dataset.pageRenameInput); }
+      if (event.key === 'Escape') { event.preventDefault(); renamingPageId = null; renderDashboardTabs(); }
+    });
 
     $('#kpiSave').onclick = saveKpi; $('#chartSave').onclick = saveChart; $('#tableSave').onclick = saveTable; $('#filterSave').onclick = saveFilter; $('#exportConfirm').onclick = saveDesign;
     $$('[data-close]').forEach((b) => b.onclick = () => closeModal(b.dataset.close));
@@ -2033,13 +2224,13 @@ button:disabled { opacity: .6; cursor: wait; }
     else if (load()) {
       if (stateNeedsRows && !(await restoreLargeRows())) { resetBuilder(); return; }
       $('#roleSelect').value = state.role; goToDashboard();
-    }
+    } else syncIntakeModal();
   }
 
   function resetBuilder() {
     localStorage.removeItem(STORAGE_KEY);
     window.__litebiCloudDashboardId = null;
-    state.meta = null; state.columns = []; state.rows = []; state.components = []; state.filters = []; state.role = 'owner'; state.theme = Object.assign({}, DEFAULT_THEME);
+    state.meta = null; state.columns = []; state.rows = []; state.components = []; state.filters = []; state.pages = [{ id: DEFAULT_PAGE_ID, name: 'Visão geral', topic: 'Visão geral' }]; state.activePageId = DEFAULT_PAGE_ID; state.role = 'owner'; state.theme = Object.assign({}, DEFAULT_THEME);
     $('#screen-preview').classList.add('hidden'); $('#screen-dashboard').classList.add('hidden'); $('#screen-upload').classList.remove('hidden'); syncIntakeModal();
     $('#fileInput').value = ''; $('#roleSelect').value = 'owner';
   }
@@ -2050,6 +2241,7 @@ button:disabled { opacity: .6; cursor: wait; }
       const data = await response.json();
       if (!response.ok || !data.dashboard || !data.dashboard.payload) throw new Error(data.error || 'Dashboard não encontrado.');
       Object.assign(state, data.dashboard.payload, { role: 'owner' });
+      ensurePages();
       window.__litebiCloudDashboardId = id;
       save(); $('#roleSelect').value = 'owner'; goToDashboard();
     } catch (error) { alert(error.message || 'Não foi possível abrir o dashboard.'); location.href = '/home'; }
